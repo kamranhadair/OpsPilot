@@ -1,5 +1,5 @@
 ---
-status: planned
+status: implemented
 step: 03
 title: Synthetic Data Generator
 owner: analytics-engineer

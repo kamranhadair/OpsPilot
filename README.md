@@ -85,6 +85,19 @@ A single `.env` at the repository root serves Docker Compose, the backend (via p
 
 Find what holds a port with `ss -ltnp | grep :8000`.
 
+## Demo data
+
+A deterministic synthetic support dataset (45 days ending 2026-10-03 UTC, ~5,800 tickets, one Billing API deployment event, and a planted EMEA Enterprise Billing anomaly) is seeded with one command. Apply migrations first (`uv run alembic upgrade head`), then from `backend/`:
+
+```bash
+uv run python -m app.scripts.seed_demo           # seed; re-running is a no-op
+uv run python -m app.scripts.seed_demo --reset   # delete demo rows, then reseed
+```
+
+- The seed uses a fixed random seed and window, never the wall clock, so a clean database always receives the same logical dataset (see `SEED_VERSION` in `app/services/demo_data/config.py`).
+- It writes only raw operational data and one `EVT-*` event. Metrics, anomalies, contributors, and briefs are computed by later stages, never seeded.
+- Demo rows are identified by `DEMO-CUST-*` / `DEMO-TCK-*` refs and the event's seed marker; `--reset` removes only those. Both commands refuse to run unless `ENVIRONMENT` is `development`, `demo`, or `test` (exit code 2).
+
 ## Quality gates
 
 Backend (from `backend/`):
