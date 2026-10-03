@@ -1,5 +1,5 @@
 ---
-status: planned
+status: verified
 step: 04
 title: Metrics Engine
 owner: analytics-engineer

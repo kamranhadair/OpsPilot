@@ -8,7 +8,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, Numeric, String
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, JSONBType, RowTimestampsMixin, UTCDateTime, str_enum
@@ -46,6 +54,8 @@ class MetricSnapshot(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     evidence_id: Mapped[str] = mapped_column(String(32), unique=True)
     metric_key: Mapped[str] = mapped_column(String(100))
+    # sha256 of the canonical analysis inputs; repeat computations reuse the row.
+    analysis_signature: Mapped[str] = mapped_column(String(64), unique=True)
     window_start: Mapped[datetime] = mapped_column(UTCDateTime)
     window_end: Mapped[datetime] = mapped_column(UTCDateTime)
     baseline_start: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -63,6 +73,10 @@ class Anomaly(Base):
     __tablename__ = "anomalies"
     __table_args__ = (
         CheckConstraint("evidence_id ~ '^ANOM-[0-9]+$'", name="evidence_prefix"),
+        # One anomaly per snapshot and (versioned) detector: repeat detection reuses the row.
+        UniqueConstraint(
+            "metric_snapshot_id", "detector_key", name="uq_anomalies_snapshot_detector"
+        ),
         Index("ix_anomalies_status_detected_at", "status", "detected_at"),
         Index("ix_anomalies_metric_snapshot_id", "metric_snapshot_id"),
     )

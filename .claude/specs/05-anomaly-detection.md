@@ -1,5 +1,5 @@
 ---
-status: planned
+status: implemented
 step: 05
 title: Anomaly Detection
 owner: analytics-engineer

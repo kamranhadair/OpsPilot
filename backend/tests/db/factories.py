@@ -96,6 +96,7 @@ def metric_snapshot(session: Session, **kw: Any) -> MetricSnapshot:
     defaults: dict[str, Any] = {
         "evidence_id": allocate_evidence_id(session, EvidenceType.METRIC),
         "metric_key": "ticket_volume",
+        "analysis_signature": f"test-signature-{_n():06d}",
         "window_start": T0,
         "window_end": T0 + timedelta(hours=24),
         "baseline_start": T0 - timedelta(days=7),

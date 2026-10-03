@@ -93,6 +93,7 @@ def test_required_indexes_exist(engine: Engine, table: str, index: str) -> None:
         ("tickets", "ticket_ref"),
         ("incidents", "evidence_id"),
         ("metric_snapshots", "evidence_id"),
+        ("metric_snapshots", "analysis_signature"),
         ("anomalies", "evidence_id"),
         ("anomaly_contributors", "evidence_id"),
     ],
@@ -134,3 +135,10 @@ def test_lifecycle_timestamps_only_where_specified(engine: Engine, table: str) -
 def test_event_tables_have_no_updated_at(engine: Engine, table: str) -> None:
     names = {c["name"] for c in inspect(engine).get_columns(table)}
     assert "updated_at" not in names
+
+
+def test_anomaly_snapshot_detector_pair_is_unique(engine: Engine) -> None:
+    uniques = [
+        tuple(u["column_names"]) for u in inspect(engine).get_unique_constraints("anomalies")
+    ]
+    assert ("metric_snapshot_id", "detector_key") in uniques
