@@ -8,6 +8,8 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from app.models.enums import AnomalySeverity, AnomalyStatus
 from app.schemas.metrics import MetricSnapshotOut
 from app.services.anomalies.detector import SkipReason, ThresholdDetails
+from app.services.anomalies.rules import Comparison
+from app.services.metrics.definitions import MetricUnit
 
 
 class AnomalyDetectRequest(BaseModel):
@@ -25,9 +27,15 @@ class AnomalyOut(BaseModel):
     metric_key: str
     display_name: str
     dimensions: dict[str, str]
+    unit: MetricUnit
+    value: float = Field(description="Current-window value of the triggering snapshot.")
+    baseline_value: float | None = Field(description="Baseline value of the triggering snapshot.")
     severity: AnomalySeverity
     status: AnomalyStatus
     score: float | None = Field(description="The triggering change: percent or percentage points.")
+    score_comparison: Comparison = Field(
+        description="relative_pct: score is percent; percentage_points: score is pp."
+    )
     detector_key: str
     window_start: datetime
     window_end: datetime

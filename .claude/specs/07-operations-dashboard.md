@@ -1,5 +1,5 @@
 ---
-status: planned
+status: implemented
 step: 07
 title: Operations Dashboard
 owner: frontend-engineer

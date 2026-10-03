@@ -3,7 +3,15 @@
  * Feature code must call these helpers rather than using `fetch` directly.
  */
 
-import type { ErrorResponse, HealthResponse } from '../types/api'
+import type {
+  AnomalyDetailOut,
+  AnomalyListParams,
+  AnomalyListResponse,
+  ContributorAnalysisResponse,
+  DashboardOverviewResponse,
+  ErrorResponse,
+  HealthResponse,
+} from '../types/api'
 
 const API_BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
@@ -63,4 +71,44 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>('/api/health')
+}
+
+export function getDashboardOverview(): Promise<DashboardOverviewResponse> {
+  return request<DashboardOverviewResponse>('/api/dashboard/overview')
+}
+
+export function listAnomalies(
+  params: AnomalyListParams = {},
+): Promise<AnomalyListResponse> {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value))
+  }
+  const qs = query.toString()
+  const suffix = qs ? `?${qs}` : ''
+  return request<AnomalyListResponse>(`/api/anomalies${suffix}`)
+}
+
+export function getAnomaly(evidenceId: string): Promise<AnomalyDetailOut> {
+  return request<AnomalyDetailOut>(
+    `/api/anomalies/${encodeURIComponent(evidenceId)}`,
+  )
+}
+
+export function getContributors(
+  evidenceId: string,
+): Promise<ContributorAnalysisResponse> {
+  return request<ContributorAnalysisResponse>(
+    `/api/anomalies/${encodeURIComponent(evidenceId)}/contributors`,
+  )
+}
+
+/** Idempotent: the backend reuses stored contributors on a repeat call. */
+export function computeContributors(
+  evidenceId: string,
+): Promise<ContributorAnalysisResponse> {
+  return request<ContributorAnalysisResponse>(
+    `/api/anomalies/${encodeURIComponent(evidenceId)}/contributors/compute`,
+    { method: 'POST' },
+  )
 }

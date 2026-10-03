@@ -1,92 +1,54 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import App from './App'
-import { ApiError } from './api/client'
+import { anomaly, anomalyDetail, contributors, overview } from '../tests/fixtures/api'
+import { api, resetApi } from '../tests/mockClient'
+import { renderAt } from '../tests/renderAt'
 
-vi.mock('./api/client', async () => {
-  const actual = await vi.importActual<typeof import('./api/client')>(
-    './api/client',
-  )
-  return { ...actual, getHealth: vi.fn() }
-})
-
-const { getHealth } = await import('./api/client')
-const getHealthMock = vi.mocked(getHealth)
-
-describe('App shell', () => {
+describe('App routes', () => {
   beforeEach(() => {
-    getHealthMock.mockReset()
+    resetApi()
+    api.getDashboardOverview.mockResolvedValue(overview())
+    api.listAnomalies.mockResolvedValue({ items: [anomaly()], total: 1, limit: 25, offset: 0 })
+    api.getAnomaly.mockResolvedValue(anomalyDetail())
+    api.getContributors.mockResolvedValue(contributors())
   })
 
-  it('renders the OpsPilot shell with placeholder navigation', () => {
-    getHealthMock.mockReturnValue(new Promise(() => {}))
+  it('renders the shell with primary navigation on every route', async () => {
+    renderAt('/')
 
-    render(<App />)
+    expect(screen.getByRole('heading', { level: 1, name: 'OpsPilot' })).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Primary' })
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/')
+    expect(within(nav).getByRole('link', { name: 'Anomalies' })).toHaveAttribute(
+      'href',
+      '/anomalies',
+    )
+    // Later-spec sections stay non-interactive.
+    expect(within(nav).queryByRole('link', { name: 'Briefs' })).not.toBeInTheDocument()
+    expect(within(nav).getByText('Briefs')).toHaveAttribute('aria-disabled', 'true')
+  })
 
+  it('/ renders the operations overview', async () => {
+    renderAt('/')
     expect(
-      screen.getByRole('heading', { level: 1, name: 'OpsPilot' }),
+      await screen.findByRole('heading', { name: 'Operations overview' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('AI Support Operations Command Center'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Anomalies')).toBeInTheDocument()
   })
 
-  it('shows the loading state while the health check is in flight', () => {
-    getHealthMock.mockReturnValue(new Promise(() => {}))
-
-    render(<App />)
-
-    expect(screen.getByRole('status')).toHaveTextContent(
-      /checking backend health/i,
-    )
+  it('/anomalies renders the anomaly explorer', async () => {
+    renderAt('/anomalies')
+    expect(await screen.findByRole('heading', { name: 'Anomaly explorer' })).toBeInTheDocument()
   })
 
-  it('shows the success state when the backend and database are healthy', async () => {
-    getHealthMock.mockResolvedValue({
-      status: 'ok',
-      service: 'opspilot-api',
-      database: 'ok',
-    })
-
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText('opspilot-api')).toBeInTheDocument()
-    })
-    expect(screen.getByText('Database')).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  it('/anomalies/:evidenceId renders the drilldown for that anomaly', async () => {
+    renderAt('/anomalies/ANOM-000007')
+    expect(await screen.findByRole('heading', { name: 'Ticket volume' })).toBeInTheDocument()
+    expect(api.getAnomaly).toHaveBeenCalledWith('ANOM-000007')
   })
 
-  it('shows the error state with the backend error code on a 503', async () => {
-    getHealthMock.mockRejectedValue(
-      new ApiError(
-        'Database connectivity check failed.',
-        503,
-        'DATABASE_UNAVAILABLE',
-      ),
-    )
-
-    render(<App />)
-
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Backend unavailable')
-    expect(alert).toHaveTextContent('Database connectivity check failed.')
-    expect(alert).toHaveTextContent('DATABASE_UNAVAILABLE')
-  })
-
-  it('never fabricates a healthy database when the backend is unreachable', async () => {
-    getHealthMock.mockRejectedValue(
-      new ApiError('Could not reach the OpsPilot API.', 0, 'NETWORK_UNREACHABLE'),
-    )
-
-    render(<App />)
-
-    await screen.findByRole('alert')
-    expect(screen.queryByText('opspilot-api')).not.toBeInTheDocument()
-    expect(screen.queryByText('ok')).not.toBeInTheDocument()
+  it('unknown routes show a not-found page', () => {
+    renderAt('/nope')
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
   })
 })

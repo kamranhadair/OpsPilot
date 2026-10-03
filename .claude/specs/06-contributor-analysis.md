@@ -1,5 +1,5 @@
 ---
-status: planned
+status: verified
 step: 06
 title: Contributor Analysis
 owner: analytics-engineer

@@ -99,6 +99,13 @@ class AnomalyContributor(Base):
     __table_args__ = (
         CheckConstraint("evidence_id ~ '^SEG-[0-9]+$'", name="evidence_prefix"),
         CheckConstraint("rank >= 1", name="rank_positive"),
+        # One row per segment of an anomaly: repeat computation reuses the rows.
+        UniqueConstraint(
+            "anomaly_id",
+            "dimension_key",
+            "segment_value",
+            name="uq_anomaly_contributors_anomaly_dimension_segment",
+        ),
         Index("ix_anomaly_contributors_anomaly_id", "anomaly_id"),
     )
 
