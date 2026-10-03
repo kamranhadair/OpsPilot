@@ -1,5 +1,5 @@
 ---
-status: planned
+status: verified
 step: 08
 title: AI Evidence Bundle
 owner: ai-engineer

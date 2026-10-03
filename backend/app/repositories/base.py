@@ -1,5 +1,6 @@
 """Thin generic persistence primitives. No business rules live here."""
 
+from collections.abc import Collection
 from typing import Any
 
 from sqlalchemy import select
@@ -36,3 +37,10 @@ class EvidenceRepositoryMixin:
     def get_by_evidence_id(self, evidence_id: str) -> Any | None:
         stmt = select(self.model).where(self.model.evidence_id == evidence_id)
         return self.session.execute(stmt).scalars().first()
+
+    def existing_evidence_ids(self, evidence_ids: Collection[str]) -> set[str]:
+        """The subset of ``evidence_ids`` that exist in this model's table."""
+        if not evidence_ids:
+            return set()
+        stmt = select(self.model.evidence_id).where(self.model.evidence_id.in_(evidence_ids))
+        return set(self.session.execute(stmt).scalars())

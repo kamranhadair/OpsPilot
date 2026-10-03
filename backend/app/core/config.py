@@ -7,7 +7,7 @@ No secret is ever hard-coded here.
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # NoDecode: parse the raw environment string with the validator below
     # instead of letting pydantic-settings attempt a JSON decode.
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
+
+    # How far before the analysis window a timeline event may sit and still be bundled.
+    evidence_event_lookback_hours: int = Field(default=72, ge=1, le=720)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
