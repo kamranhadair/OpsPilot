@@ -112,7 +112,7 @@ Infrastructure (from the repository root):
 docker compose config
 ```
 
-Backend tests override the database dependency, so **no running database is required** for `pytest`.
+Backend tests override the database dependency, so the health tests need no database. Database tests (migrations, constraints, repositories) run only when `TEST_DATABASE_URL` points at a dedicated database whose name ends in `_test` (see `.env.example`); otherwise they are skipped. The destructive downgrade test refuses to run against `DATABASE_URL` or any non-`_test` database.
 
 ## Project layout
 
