@@ -122,7 +122,10 @@ def test_required_indexes_exist(engine: Engine, table: str, index: str) -> None:
 )
 def test_unique_constraints_exist(engine: Engine, table: str, column: str) -> None:
     insp = inspect(engine)
-    uniques = [tuple(u["column_names"]) for u in insp.get_unique_constraints(table)]
+    # Index column names are None for expression indexes.
+    uniques: list[tuple[str | None, ...]] = [
+        tuple(u["column_names"]) for u in insp.get_unique_constraints(table)
+    ]
     uniques += [tuple(i["column_names"]) for i in insp.get_indexes(table) if i["unique"]]
     assert (column,) in uniques
 

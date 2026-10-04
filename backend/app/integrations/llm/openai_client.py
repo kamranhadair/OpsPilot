@@ -54,7 +54,9 @@ class OpenAILLMClient:
             raise LLMNotConfiguredError("OPENAI_API_KEY and OPENAI_MODEL must be configured.")
         assert settings.openai_model is not None
         self._model = settings.openai_model
-        extra = {} if http_client is None else {"http_client": http_client}
+        extra: dict[str, object] = {} if http_client is None else {"http_client": http_client}
+        if settings.openai_base_url:
+            extra["base_url"] = settings.openai_base_url
         # max_retries bounds the SDK's own backoff on 429/5xx/timeouts.
         self._client = openai.OpenAI(
             api_key=settings.openai_api_key.get_secret_value(),

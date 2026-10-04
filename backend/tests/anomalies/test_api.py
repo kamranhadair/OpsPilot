@@ -34,7 +34,7 @@ def test_invalid_detect_body_is_422(client: TestClient, body: dict[str, object])
         {"start": "2026-03-01T00:00:00"},  # naive
     ],
 )
-def test_invalid_list_params_are_422(client: TestClient, params: dict[str, object]) -> None:
+def test_invalid_list_params_are_422(client: TestClient, params: dict[str, str | int]) -> None:
     assert client.get("/api/anomalies", params=params).status_code == 422
 
 

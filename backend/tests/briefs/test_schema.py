@@ -5,10 +5,15 @@ from pydantic import ValidationError
 
 from app.schemas.briefs import BriefDraftOutput
 
-VALID = {
+CLAIM: dict[str, object] = {
+    "claim_type": "observation",
+    "text": "t",
+    "evidence_ids": ["MTR-000001"],
+}
+VALID: dict[str, object] = {
     "headline": "h",
     "summary": "s",
-    "claims": [{"claim_type": "observation", "text": "t", "evidence_ids": ["MTR-000001"]}],
+    "claims": [CLAIM],
     "attention_items": ["look"],
 }
 
@@ -19,7 +24,7 @@ def test_valid_payload_parses() -> None:
 
 
 def test_unknown_evidence_id_is_accepted_here_and_left_untouched() -> None:
-    payload = {**VALID, "claims": [{**VALID["claims"][0], "evidence_ids": ["MTR-999999"]}]}  # type: ignore[index]
+    payload = {**VALID, "claims": [{**CLAIM, "evidence_ids": ["MTR-999999"]}]}
     assert BriefDraftOutput.model_validate(payload).claims[0].evidence_ids == ["MTR-999999"]
 
 

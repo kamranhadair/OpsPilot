@@ -234,7 +234,9 @@ def test_real_bundle_ids_validate_and_fabricated_ids_are_logged(
     assert invalid.status == BriefStatus.INVALID
     stored = clean_briefs.get(Brief, invalid.id)
     assert stored is not None and stored.status == BriefStatus.INVALID
-    assert stored.validation_errors_json[0]["code"] == "EVIDENCE_NOT_IN_BUNDLE"
+    errors = stored.validation_errors_json
+    assert isinstance(errors, list)
+    assert errors[0]["code"] == "EVIDENCE_NOT_IN_BUNDLE"
     assert _count(clean_briefs, LLMTrace) == 2
     assert f"Brief {invalid.id} failed validation" in caplog.text
     assert "EVIDENCE_NOT_IN_BUNDLE" in caplog.text and "SEG-999999" in caplog.text

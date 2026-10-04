@@ -141,6 +141,7 @@ def test_zero_baseline_yields_null_change_and_flag(world: World) -> None:
     assert p1.baseline_zero
     for item in response.items:
         snap = item.snapshot
+        assert snap is not None
         for number in (snap.value, snap.baseline_value, snap.change_pct, snap.change_pp):
             assert number is None or math.isfinite(number)
 

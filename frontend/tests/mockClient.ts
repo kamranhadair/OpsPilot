@@ -26,6 +26,8 @@ vi.mock('../src/api/client', async () => {
     getSystemHealth: vi.fn(),
     listLlmTraces: vi.fn(),
     getSystemSummary: vi.fn(),
+    getDemoStatus: vi.fn(),
+    runDemoAnalysis: vi.fn(),
   }
 })
 
@@ -51,6 +53,8 @@ export const api = {
   getSystemHealth: vi.mocked(client.getSystemHealth),
   listLlmTraces: vi.mocked(client.listLlmTraces),
   getSystemSummary: vi.mocked(client.getSystemSummary),
+  getDemoStatus: vi.mocked(client.getDemoStatus),
+  runDemoAnalysis: vi.mocked(client.runDemoAnalysis),
 }
 
 export const pending = () => new Promise<never>(() => {})
@@ -61,4 +65,8 @@ export function resetApi() {
   api.getSystemHealth.mockResolvedValue(systemHealth())
   api.listLlmTraces.mockResolvedValue(llmTraceList())
   api.getSystemSummary.mockResolvedValue(systemSummary())
+  // The demo control stays hidden unless a test enables it.
+  api.getDemoStatus.mockRejectedValue(
+    new client.ApiError('Demo endpoints are disabled.', 404, 'DEMO_DISABLED'),
+  )
 }

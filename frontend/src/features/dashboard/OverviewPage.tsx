@@ -6,6 +6,7 @@ import { EmptyPanel, ErrorPanel, LoadingPanel } from '../../components/StatePane
 import { formatUtc } from '../../lib/format'
 import type { DashboardOverviewResponse } from '../../types/api'
 import { AnomalyTable } from '../anomalies/AnomalyTable'
+import { RunAnalysisPanel } from '../demo/RunAnalysisPanel'
 import { HealthPanel } from '../system/HealthPanel'
 import { MetricCard } from './MetricCard'
 import { TrendChart } from './TrendChart'
@@ -14,11 +15,9 @@ function Overview({ data }: { data: DashboardOverviewResponse }) {
   if (data.window_end === null) {
     return (
       <EmptyPanel title="No metrics computed yet">
-        Compute metric snapshots first, for example{' '}
-        <code className="font-mono text-xs">
-          python -m app.scripts.compute_metric_history --detect
-        </code>
-        .
+        Run the analysis first, for example{' '}
+        <code className="font-mono text-xs">python -m app.scripts.demo analyze</code>{' '}
+        or the Run analysis control in demo environments.
       </EmptyPanel>
     )
   }
@@ -84,6 +83,7 @@ export function OverviewPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Operations overview</h2>
+      <RunAnalysisPanel onAnalysed={reload} />
       {state.kind === 'loading' && <LoadingPanel label="Loading operations overview…" />}
       {state.kind === 'error' && (
         <ErrorPanel title="Overview unavailable" error={state.error} onRetry={reload} />

@@ -1,6 +1,8 @@
 /** Typed API fixtures shaped like the seeded canonical Billing scenario. */
 
 import type {
+  AnalysisRunResponse,
+  DemoStatusResponse,
   ActionDetailOut,
   ActionOut,
   ApprovalOut,
@@ -868,6 +870,47 @@ export function systemSummary(overrides: Partial<SystemSummaryOut> = {}): System
     window_end: '2026-10-03T12:00:00Z',
     llm: llmSummary(),
     executions: { total: 0, succeeded: 0, failed: 0, recent_failures: [] },
+    ...overrides,
+  }
+}
+
+export function demoStatus(overrides: Partial<DemoStatusResponse> = {}): DemoStatusResponse {
+  return {
+    enabled: true,
+    dataset_seeded: true,
+    analysis_window_end: null,
+    llm_configured: true,
+    ...overrides,
+  }
+}
+
+export function analysisRun(overrides: Partial<AnalysisRunResponse> = {}): AnalysisRunResponse {
+  return {
+    window_start: '2026-10-03T00:00:00Z',
+    window_end: '2026-10-04T00:00:00Z',
+    metric_windows_computed: 14,
+    metric_evidence_ids: ['MTR-000001', 'MTR-000101'],
+    anomalies: [
+      {
+        evidence_id: 'ANOM-000003',
+        metric_evidence_id: 'MTR-000101',
+        metric_key: 'ticket_volume',
+        display_name: 'Ticket volume',
+        dimensions: { category: 'billing' },
+        severity: 'high',
+        contributor_status: 'computed',
+        contributor_evidence_ids: ['SEG-000001'],
+      },
+    ],
+    evidence: {
+      allowed_evidence_ids: ['ANOM-000003', 'EVT-000001', 'MTR-000101', 'SEG-000001'],
+      metric_count: 1,
+      anomaly_count: 1,
+      contributor_count: 1,
+      related_event_count: 1,
+      signature: 'abc',
+    },
+    brief: { state: 'generated', brief_id: 7, status: 'valid', error_code: null, message: null },
     ...overrides,
   }
 }

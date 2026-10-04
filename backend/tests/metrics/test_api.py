@@ -38,7 +38,7 @@ def test_start_after_end_is_422_with_code(client: TestClient) -> None:
         {"category": "sales"},
     ],
 )
-def test_invalid_series_params_are_422(client: TestClient, params: dict[str, object]) -> None:
+def test_invalid_series_params_are_422(client: TestClient, params: dict[str, str | int]) -> None:
     assert client.get("/api/metrics/ticket_volume", params=params).status_code == 422
 
 

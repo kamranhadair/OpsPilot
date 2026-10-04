@@ -14,8 +14,10 @@ import type {
   BriefOut,
   ApiErrorBody,
   ApproveActionRequest,
+  AnalysisRunResponse,
   ContributorAnalysisResponse,
   DashboardOverviewResponse,
+  DemoStatusResponse,
   EvaluationLatestResponse,
   EvidenceDetailOut,
   HealthResponse,
@@ -231,4 +233,17 @@ export function getSystemSummary(period: SummaryPeriod = '7d'): Promise<SystemSu
   return request<SystemSummaryOut>(
     `/api/system/summary?period=${encodeURIComponent(period)}`,
   )
+}
+
+/** Demo readiness. 404 `DEMO_DISABLED` outside demo/development environments. */
+export function getDemoStatus(): Promise<DemoStatusResponse> {
+  return request<DemoStatusResponse>('/api/demo/status')
+}
+
+/**
+ * Runs metrics -> anomalies -> contributors -> evidence -> brief for the final window.
+ * Never proposes or executes an action. 409 `NO_SOURCE_DATA` when the demo is not seeded.
+ */
+export function runDemoAnalysis(): Promise<AnalysisRunResponse> {
+  return postJson<AnalysisRunResponse>('/api/demo/analysis/run')
 }

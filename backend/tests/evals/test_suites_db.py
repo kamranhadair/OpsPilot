@@ -61,6 +61,7 @@ def test_normal_cases_report_false_positive_tallies(demo_context: ContextFactory
     assert results and all(r.tally is not None and r.tally.checked > 0 for r in results)
     for r in results:
         # The tally is the evidence: a case passes exactly when nothing was flagged.
+        assert r.tally is not None
         assert (r.status == "pass") == (r.tally.flagged == 0), r.case_id
     # The final-day non-Billing queues carry no planted change.
     finals = [r for r in results if r.case_id.endswith("_final_day")]

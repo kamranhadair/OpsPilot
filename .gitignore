@@ -31,3 +31,8 @@ coverage/
 # Evaluation reports (volatile run output; regenerate with `python -m app.evals.run`)
 backend/evals/reports/*
 !backend/evals/reports/.gitkeep
+
+# Playwright (Spec 15) output and isolated e2e evaluation reports
+frontend/playwright-report/
+frontend/test-results/
+frontend/.e2e/

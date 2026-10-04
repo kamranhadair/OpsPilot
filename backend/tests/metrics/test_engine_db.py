@@ -61,7 +61,7 @@ def rows(session: Session, filters: dict[Dimension, str]) -> list[Row]:
         .join(Customer, Ticket.customer_id == Customer.id)
         .join(SupportTeam, Ticket.support_team_id == SupportTeam.id)
     )
-    result = [tuple(r) for r in session.execute(stmt)]
+    result: list[Row] = [(t, c, s) for t, c, s in session.execute(stmt).tuples()]
 
     def keep(r: Row) -> bool:
         t, c, s = r
@@ -74,7 +74,7 @@ def rows(session: Session, filters: dict[Dimension, str]) -> list[Row]:
         }
         return all(actual[d] == v for d, v in filters.items())
 
-    return [r for r in result if keep(r)]  # type: ignore[misc]
+    return [r for r in result if keep(r)]
 
 
 def created(tickets: Sequence[Ticket], start: datetime, end: datetime) -> list[Ticket]:
@@ -200,7 +200,7 @@ def test_current_window_tickets_do_not_change_the_baseline(world: World) -> None
     )
 
     assert before.baseline_value == after.baseline_value == Decimal(1)
-    assert (before.current.value, after.current.value) == (0, 50)
+    assert (before.current.value, after.current.value) == (Decimal(0), Decimal(50))
 
 
 def test_tickets_before_the_baseline_are_ignored(world: World) -> None:

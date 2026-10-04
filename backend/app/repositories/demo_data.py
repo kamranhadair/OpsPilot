@@ -7,7 +7,22 @@ from typing import Any
 from sqlalchemy import delete, exists, func, insert, select, text
 from sqlalchemy.orm import Session
 
-from app.models import Customer, Incident, SupportTeam, Ticket
+from app.models import (
+    ActionExecution,
+    Anomaly,
+    AnomalyContributor,
+    Approval,
+    AuditLog,
+    Brief,
+    BriefClaim,
+    Customer,
+    Incident,
+    LLMTrace,
+    MetricSnapshot,
+    ProposedAction,
+    SupportTeam,
+    Ticket,
+)
 from app.models.enums import EvidenceType
 from app.services.evidence_ids import EVIDENCE_SEQUENCES
 
@@ -100,10 +115,55 @@ class DemoDataRepository:
 
     def restart_event_sequence_if_no_incidents(self) -> bool:
         """Restart ``EVT-`` numbering, but only when no incident rows remain."""
-        remaining = self.session.execute(select(func.count()).select_from(Incident)).scalar_one()
+        return self._restart_sequence_if_empty(EvidenceType.EVENT)
+
+    # --- derived artifacts (Spec 15 demo reset) --------------------------------------
+
+    def delete_derived_artifacts(self) -> dict[str, int]:
+        """Delete every row derived from the operational data, in foreign-key order.
+
+        Returns the deleted row count per table. Callers must have checked the
+        demo/development environment guard first.
+        """
+        deleted: dict[str, int] = {}
+        for model in _DERIVED_DELETE_ORDER:
+            table = model.__table__
+            result = self.session.execute(delete(table))
+            deleted[table.name] = int(result.rowcount)  # type: ignore[attr-defined]
+        return deleted
+
+    def restart_evidence_sequences_if_empty(self) -> list[EvidenceType]:
+        """Restart each evidence-ID sequence whose table is empty; returns the restarted types."""
+        return [t for t in EVIDENCE_SEQUENCES if self._restart_sequence_if_empty(t)]
+
+    def _restart_sequence_if_empty(self, evidence_type: EvidenceType) -> bool:
+        model = _EVIDENCE_TABLES[evidence_type]
+        remaining = self.session.execute(select(func.count()).select_from(model)).scalar_one()
         if remaining:
             return False
         # The sequence name comes from a closed, code-owned mapping, never user input.
-        sequence = EVIDENCE_SEQUENCES[EvidenceType.EVENT]
+        sequence = EVIDENCE_SEQUENCES[evidence_type]
         self.session.execute(text(f"ALTER SEQUENCE {sequence} RESTART WITH 1"))
         return True
+
+
+# Children before parents so no RESTRICT foreign key blocks a delete.
+_DERIVED_DELETE_ORDER: tuple[type[Any], ...] = (
+    ActionExecution,
+    Approval,
+    LLMTrace,
+    ProposedAction,
+    BriefClaim,
+    Brief,
+    AuditLog,
+    AnomalyContributor,
+    Anomaly,
+    MetricSnapshot,
+)
+
+_EVIDENCE_TABLES: dict[EvidenceType, type[Any]] = {
+    EvidenceType.EVENT: Incident,
+    EvidenceType.METRIC: MetricSnapshot,
+    EvidenceType.ANOMALY: Anomaly,
+    EvidenceType.SEGMENT: AnomalyContributor,
+}

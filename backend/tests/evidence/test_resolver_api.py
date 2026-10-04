@@ -6,7 +6,13 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.schemas.evidence import CONTRIBUTOR_CONTEXT_NOTE, EVENT_CONTEXT_NOTE, EvidenceDetailOut
+from app.models.enums import EvidenceType
+from app.schemas.evidence import (
+    CONTRIBUTOR_CONTEXT_NOTE,
+    EVENT_CONTEXT_NOTE,
+    EventDetailProvenance,
+    EvidenceDetailOut,
+)
 from app.services.anomalies.service import AnomalyService
 from app.services.contributors.service import ContributorService
 from tests.db import factories
@@ -103,7 +109,8 @@ def test_event_resolves_with_disclaimer_and_allow_listed_details_only(
     assert detail.evidence_type == "EVT" and detail.evidence_class == "contextual_event"
     assert detail.contextual_disclaimer == EVENT_CONTEXT_NOTE
     assert detail.window is None and detail.sample_size is None
-    assert detail.provenance.evidence_type == "EVT"
+    assert isinstance(detail.provenance, EventDetailProvenance)
+    assert detail.provenance.evidence_type == EvidenceType.EVENT
     assert detail.provenance.details == {"version": "2.4.0"}
     response = db_client.get(f"/api/evidence/{row.evidence_id}")
     assert "secret customer text" not in response.text

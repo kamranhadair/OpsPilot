@@ -4,11 +4,13 @@ import {
   ApiError,
   approveAction,
   executeAction,
+  getDemoStatus,
   getLatestEvaluation,
   getSystemHealth,
   getSystemSummary,
   listLlmTraces,
   rejectAction,
+  runDemoAnalysis,
 } from './client'
 
 function stubFetch(status: number, body: unknown) {
@@ -141,5 +143,30 @@ describe('system client', () => {
     const error = await getSystemSummary().catch((e: unknown) => e)
     expect((error as ApiError).status).toBe(404)
     expect((error as ApiError).code).toBe('SYSTEM_ENDPOINTS_DISABLED')
+  })
+})
+
+describe('demo client', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('reads demo status with a GET', async () => {
+    const fetchMock = stubFetch(200, { enabled: true })
+    await getDemoStatus()
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toMatch(/\/api\/demo\/status$/)
+    expect(init.method).toBeUndefined()
+  })
+
+  it('posts the analysis run and surfaces DEMO_DISABLED', async () => {
+    const fetchMock = stubFetch(404, {
+      code: 'DEMO_DISABLED',
+      message: 'Demo endpoints are disabled outside demo environments.',
+    })
+    const error = await runDemoAnalysis().catch((e: unknown) => e)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toMatch(/\/api\/demo\/analysis\/run$/)
+    expect(init.method).toBe('POST')
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).code).toBe('DEMO_DISABLED')
   })
 })

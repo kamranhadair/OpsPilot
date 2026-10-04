@@ -102,7 +102,7 @@ def test_success_parses_output_and_sends_exact_bundle() -> None:
     assert len(seen) == 1
     assert seen[0]["model"] == "configured-model"  # model name comes from settings
     messages = seen[0]["input"]
-    assert messages == [  # type: ignore[comparison-overlap]
+    assert messages == [
         {"role": "system", "content": BRIEF_SYSTEM_PROMPT},
         {"role": "user", "content": bundle.model_dump_json()},
     ]

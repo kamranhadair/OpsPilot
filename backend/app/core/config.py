@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     openai_model: str | None = None
     openai_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     openai_max_retries: int = Field(default=2, ge=0, le=5)
+    # Optional OpenAI-compatible endpoint. Unset means the provider default. The offline
+    # end-to-end test points it at a local stub; it is never a silent fallback.
+    openai_base_url: str | None = None
 
     # Spec 13 evaluation. Reports are written relative to the backend directory. The
     # optional model-based citation judge never runs unless explicitly enabled here

@@ -8,6 +8,7 @@ from app.api.routes import (
     briefs,
     contributors,
     dashboard,
+    demo,
     evaluations,
     evidence,
     evidence_bundles,
@@ -28,3 +29,4 @@ api_router.include_router(evidence.router)
 api_router.include_router(actions.router)
 api_router.include_router(evaluations.router)
 api_router.include_router(system.router)
+api_router.include_router(demo.router)

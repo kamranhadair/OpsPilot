@@ -2,7 +2,7 @@
 
 import statistics
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -64,7 +64,7 @@ def between(tickets: Iterable[TicketRecord], start: datetime, end: datetime) -> 
     return [t for t in tickets if start <= t.created_at < end]
 
 
-def rate(tickets: list[TicketRecord], predicate: Callable[[TicketRecord], bool]) -> float:
+def rate(tickets: Sequence[TicketRecord], predicate: Callable[[TicketRecord], bool]) -> float:
     return sum(predicate(t) for t in tickets) / len(tickets)
 
 

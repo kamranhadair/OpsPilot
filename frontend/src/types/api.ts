@@ -738,3 +738,53 @@ export interface SystemSummaryOut {
   llm: LLMSummary
   executions: ExecutionSummary
 }
+
+// --- Demo analysis (Spec 15) -----------------------------------------------------
+
+export interface DemoStatusResponse {
+  enabled: boolean
+  dataset_seeded: boolean
+  /** Null before the first analysis run. */
+  analysis_window_end: string | null
+  llm_configured: boolean
+}
+
+export interface AnalysisAnomalyOut {
+  evidence_id: string
+  metric_evidence_id: string
+  metric_key: string
+  display_name: string
+  dimensions: Record<string, string>
+  severity: AnomalySeverity
+  contributor_status: 'computed' | 'reused' | 'not_supported'
+  contributor_evidence_ids: string[]
+}
+
+export interface AnalysisEvidenceOut {
+  allowed_evidence_ids: string[]
+  metric_count: number
+  anomaly_count: number
+  contributor_count: number
+  related_event_count: number
+  signature: string
+}
+
+export interface AnalysisBriefOut {
+  /** generated: written and validated; not_configured: no API key/model; failed: model call failed. */
+  state: 'generated' | 'not_configured' | 'failed'
+  brief_id: number | null
+  status: BriefStatus | null
+  error_code: string | null
+  message: string | null
+}
+
+export interface AnalysisRunResponse {
+  window_start: string
+  window_end: string
+  metric_windows_computed: number
+  metric_evidence_ids: string[]
+  /** Most severe first (backend ordering). */
+  anomalies: AnalysisAnomalyOut[]
+  evidence: AnalysisEvidenceOut
+  brief: AnalysisBriefOut
+}
