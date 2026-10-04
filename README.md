@@ -20,6 +20,18 @@ The demo dataset has 45 days of tickets ending 2026-10-03 UTC. It contains one p
 
 OpsPilot detects the anomaly deterministically and ranks the contributing segments. A brief then says what happened, citing each fact. It says the deployment *coincided with* the rise and warrants investigation; it does **not** say the deployment caused it. Next, OpsPilot drafts an investigation for a human to review, edit and approve. Only after that approval can it be executed, through a mock adapter that returns an `INV-*` reference.
 
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, Vite, Tailwind CSS, Recharts |
+| Backend | Python, FastAPI, Pydantic |
+| Data | PostgreSQL, SQLAlchemy 2.x, Alembic |
+| AI | OpenAI API behind a single application-owned client boundary |
+| Testing | Pytest, Vitest + Testing Library, Playwright |
+| Quality | Ruff, Mypy, ESLint, `tsc --noEmit` |
+| Runtime | Docker Compose |
+
 ## Architecture
 
 ```mermaid
@@ -101,7 +113,9 @@ The approval boundary follows from four rules:
 
 The mock adapter runs only in demo, development or test environments; elsewhere it fails closed.
 
-## Prerequisites
+## Getting started
+
+### Prerequisites
 
 | Tool | Version used |
 |---|---|
@@ -110,7 +124,7 @@ The mock adapter runs only in demo, development or test environments; elsewhere 
 | Node.js | 22+ |
 | Docker + Compose | Compose v2 |
 
-## Setup and quick start
+### Quick start
 
 ```bash
 # 1. Configure the environment (placeholders are fine for local development)
@@ -242,7 +256,7 @@ The real `OpenAILLMClient`, output parsing, claim validation and trace recording
 
 ## Evaluation approach
 
-The evaluation harness (Spec 13) checks the system against versioned golden cases in `backend/app/evals/cases/`. From `backend/`, after seeding:
+The evaluation harness checks the system against versioned golden cases in `backend/app/evals/cases/`. From `backend/`, after seeding:
 
 ```bash
 uv run python -m app.evals.run --suite all   # deterministic + AI guardrails (default)
@@ -308,8 +322,6 @@ System endpoints are available in demo, development and test environments only (
 
 ```text
 OpsPilot/
-├── CLAUDE.md                 # repository constitution
-├── .claude/specs/            # specs that drive implementation
 ├── docs/demo-runbook.md      # 3-4 minute demo script
 ├── backend/
 │   ├── app/
