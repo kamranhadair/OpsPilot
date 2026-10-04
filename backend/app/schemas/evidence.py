@@ -12,13 +12,16 @@ import hashlib
 from collections import Counter
 from collections.abc import Sequence
 from enum import StrEnum
-from typing import Any, Literal, Self
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import AnomalySeverity, EvidenceType
+from app.services.anomalies.detector import ThresholdDetails
 from app.services.anomalies.rules import Comparison
+from app.services.contributors.provenance import ContributorProvenance
 from app.services.metrics.definitions import MetricUnit
+from app.services.metrics.provenance import MetricProvenance
 
 EvidenceClass = Literal["observed_fact", "contextual_event"]
 MetricRole = Literal["overview", "anomaly_trigger"]
@@ -27,6 +30,10 @@ ContributorStatus = Literal["available", "not_computed", "none_ranked"]
 EVENT_CONTEXT_NOTE = (
     "Timeline context only. It occurred near the analysis window; "
     "no link to the metric change has been established."
+)
+CONTRIBUTOR_CONTEXT_NOTE = (
+    "Share of the observed change only. A contributing segment locates where the change "
+    "happened; it does not establish why."
 )
 
 
@@ -236,3 +243,86 @@ class EvidenceBundle(_Frozen):
         if self.signature != self.compute_signature():
             raise ValueError("signature does not match the bundle content.")
         return self
+
+
+# --- Evidence resolver envelope (GET /api/evidence/{evidence_id}) ----------------------
+
+
+class EvidenceValue(_Frozen):
+    """One backend-labelled value; the frontend formats it but never derives it."""
+
+    key: str
+    label: str
+    value: float | int | str | None
+    unit: str | None = Field(
+        default=None,
+        description="count, minutes, percent, percentage_points, or null for text values.",
+    )
+    note: str | None = Field(default=None, description="Why a value is null, when it is.")
+
+
+EvidenceMethodKind = Literal[
+    "metric_calculation", "anomaly_detector", "contribution", "timeline_event"
+]
+
+
+class EvidenceMethod(_Frozen):
+    kind: EvidenceMethodKind
+    name: str
+    version: str | None = None
+    formula: str | None = None
+    description: str | None = None
+
+
+class MetricDetailProvenance(_Frozen):
+    evidence_type: Literal[EvidenceType.METRIC] = EvidenceType.METRIC
+    computed_at: AwareDatetime
+    metric: MetricProvenance
+
+
+class AnomalyDetailProvenance(_Frozen):
+    evidence_type: Literal[EvidenceType.ANOMALY] = EvidenceType.ANOMALY
+    detected_at: AwareDatetime
+    threshold: ThresholdDetails
+
+
+class ContributorDetailProvenance(_Frozen):
+    evidence_type: Literal[EvidenceType.SEGMENT] = EvidenceType.SEGMENT
+    statement: str
+    contribution: ContributorProvenance
+
+
+class EventDetailProvenance(_Frozen):
+    evidence_type: Literal[EvidenceType.EVENT] = EvidenceType.EVENT
+    source: Literal["incident_timeline"] = "incident_timeline"
+    event_type: str
+    occurred_at: AwareDatetime
+    details: dict[str, str] = Field(description="Allow-listed incident fields only.")
+
+
+EvidenceDetailProvenance = Annotated[
+    MetricDetailProvenance
+    | AnomalyDetailProvenance
+    | ContributorDetailProvenance
+    | EventDetailProvenance,
+    Field(discriminator="evidence_type"),
+]
+
+
+class EvidenceDetailOut(_Frozen):
+    """Common typed envelope for any persisted MTR/ANOM/SEG/EVT evidence."""
+
+    evidence_id: str
+    evidence_type: EvidenceType
+    evidence_class: EvidenceClass
+    label: str
+    window: WindowOut | None = Field(description="Null for timeline events.")
+    baseline_window: WindowOut | None
+    dimensions: dict[str, str]
+    sample_size: int | None
+    sample_sufficient: bool | None
+    values: list[EvidenceValue]
+    method: EvidenceMethod
+    related_evidence_ids: list[str]
+    contextual_disclaimer: str | None
+    provenance: EvidenceDetailProvenance

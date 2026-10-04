@@ -16,7 +16,9 @@ from app.db.base import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep application loggers (e.g. brief validation warnings) alive when migrations
+    # run in-process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # A caller (for example the test suite) may supply an explicit URL; otherwise
 # fall back to the application settings.

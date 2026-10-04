@@ -24,9 +24,11 @@ describe('App routes', () => {
       'href',
       '/anomalies',
     )
+    expect(within(nav).getByRole('link', { name: 'Briefs' })).toHaveAttribute('href', '/briefs')
+    expect(within(nav).getByRole('link', { name: 'Actions' })).toHaveAttribute('href', '/actions')
     // Later-spec sections stay non-interactive.
-    expect(within(nav).queryByRole('link', { name: 'Briefs' })).not.toBeInTheDocument()
-    expect(within(nav).getByText('Briefs')).toHaveAttribute('aria-disabled', 'true')
+    expect(within(nav).queryByRole('link', { name: 'System' })).not.toBeInTheDocument()
+    expect(within(nav).getByText('System')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('/ renders the operations overview', async () => {

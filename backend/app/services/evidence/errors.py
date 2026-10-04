@@ -13,3 +13,13 @@ class EvidenceError(Exception):
 class EvidenceInspectionDisabledError(EvidenceError):
     code = "EVIDENCE_INSPECTION_DISABLED"
     http_status = 404
+
+
+class EvidenceNotFoundError(EvidenceError):
+    code = "EVIDENCE_NOT_FOUND"
+    http_status = 404
+
+
+class InvalidEvidenceIdError(EvidenceError):
+    code = "INVALID_EVIDENCE_ID"
+    http_status = 422

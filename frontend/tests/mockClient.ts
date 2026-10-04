@@ -11,6 +11,15 @@ vi.mock('../src/api/client', async () => {
     getAnomaly: vi.fn(),
     getContributors: vi.fn(),
     computeContributors: vi.fn(),
+    getBrief: vi.fn(),
+    getLatestBrief: vi.fn(),
+    getEvidence: vi.fn(),
+    listActions: vi.fn(),
+    getAction: vi.fn(),
+    proposeAction: vi.fn(),
+    approveAction: vi.fn(),
+    rejectAction: vi.fn(),
+    executeAction: vi.fn(),
   }
 })
 
@@ -23,6 +32,15 @@ export const api = {
   getAnomaly: vi.mocked(client.getAnomaly),
   getContributors: vi.mocked(client.getContributors),
   computeContributors: vi.mocked(client.computeContributors),
+  getBrief: vi.mocked(client.getBrief),
+  getLatestBrief: vi.mocked(client.getLatestBrief),
+  getEvidence: vi.mocked(client.getEvidence),
+  listActions: vi.mocked(client.listActions),
+  getAction: vi.mocked(client.getAction),
+  proposeAction: vi.mocked(client.proposeAction),
+  approveAction: vi.mocked(client.approveAction),
+  rejectAction: vi.mocked(client.rejectAction),
+  executeAction: vi.mocked(client.executeAction),
 }
 
 export const pending = () => new Promise<never>(() => {})

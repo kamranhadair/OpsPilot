@@ -3,7 +3,12 @@
  * Nothing here derives a metric, a change, a threshold or a severity.
  */
 
-import type { Comparison, MetricSnapshotOut, MetricUnit } from '../types/api'
+import type {
+  Comparison,
+  EvidenceValue,
+  MetricSnapshotOut,
+  MetricUnit,
+} from '../types/api'
 
 const COUNT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
 const ONE_DECIMAL = new Intl.NumberFormat('en-US', {
@@ -108,7 +113,7 @@ const VALUE_LABELS: Record<string, string> = {
   billing_api: 'Billing API',
 }
 
-function formatValue(value: string): string {
+export function formatValue(value: string): string {
   return VALUE_LABELS[value] ?? humanize(value)
 }
 
@@ -122,4 +127,17 @@ export function formatDimensions(dimensions: Record<string, string>): string {
 
 export function formatFamily(dimensions: string[]): string {
   return dimensions.map((d) => DIMENSION_LABELS[d] ?? humanize(d)).join(' + ')
+}
+
+/**
+ * One backend-labelled evidence value. A null value is shown as unavailable with
+ * the backend's reason; it is never replaced by a computed number.
+ */
+export function formatEvidenceValue(item: Pick<EvidenceValue, 'value' | 'unit'>): string {
+  const { value, unit } = item
+  if (value === null) return 'Unavailable'
+  if (typeof value === 'string') return formatValue(value)
+  if (unit === 'percentage_points') return `${ONE_DECIMAL.format(value)} pp`
+  if (unit === null) return COUNT.format(value)
+  return formatMetricValue(value, unit)
 }

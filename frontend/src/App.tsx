@@ -1,8 +1,12 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from './components/layout/AppShell'
+import { ActionDetailPage } from './features/actions/ActionDetailPage'
+import { ActionsListPage } from './features/actions/ActionsListPage'
 import { AnomalyDrilldownPage } from './features/anomalies/AnomalyDrilldownPage'
 import { AnomalyExplorerPage } from './features/anomalies/AnomalyExplorerPage'
+import { BriefPage } from './features/briefs/BriefPage'
+import { LatestBriefPage } from './features/briefs/LatestBriefPage'
 import { OverviewPage } from './features/dashboard/OverviewPage'
 
 function NotFoundPage() {
@@ -25,6 +29,10 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route path="anomalies" element={<AnomalyExplorerPage />} />
         <Route path="anomalies/:evidenceId" element={<AnomalyDrilldownPage />} />
+        <Route path="briefs" element={<LatestBriefPage />} />
+        <Route path="briefs/:briefId" element={<BriefPage />} />
+        <Route path="actions" element={<ActionsListPage />} />
+        <Route path="actions/:actionId" element={<ActionDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -226,3 +226,259 @@ export interface DashboardOverviewResponse {
   active_anomalies: AnomalyOut[]
   active_anomaly_total: number
 }
+
+// --- briefs (backend/app/schemas/briefs.py) -------------------------------------------
+
+export type BriefStatus = 'draft' | 'valid' | 'invalid'
+export type ClaimType = 'observation' | 'inference'
+export type ClaimValidationStatus = 'pending' | 'valid' | 'invalid'
+
+export type ValidationIssueCode =
+  | 'EVIDENCE_MISSING'
+  | 'EVIDENCE_NOT_IN_BUNDLE'
+  | 'EVIDENCE_UNRESOLVED'
+  | 'EVIDENCE_WINDOW_MISMATCH'
+  | 'CAUSAL_LANGUAGE_FOR_EVENT'
+  | 'CAUSAL_LANGUAGE_IN_NARRATIVE'
+  | 'BRIEF_HAS_NO_CLAIMS'
+
+export interface ValidationIssue {
+  code: ValidationIssueCode
+  message: string
+  evidence_id?: string | null
+  phrase?: string | null
+  claim_ordinal?: number | null
+  field?: 'headline' | 'summary' | null
+}
+
+export interface BriefClaimOut {
+  ordinal: number
+  claim_type: ClaimType
+  text: string
+  evidence_ids: string[]
+  validation_status: ClaimValidationStatus
+  validation_errors: ValidationIssue[]
+}
+
+export interface BriefOut {
+  id: number
+  analysis_window_start: string
+  analysis_window_end: string
+  headline: string
+  summary: string
+  status: BriefStatus
+  model_name: string
+  validation_errors: ValidationIssue[]
+  created_at: string
+  claims: BriefClaimOut[]
+}
+
+// --- evidence resolver (backend/app/schemas/evidence.py) ------------------------------
+
+export type EvidenceType = 'MTR' | 'ANOM' | 'SEG' | 'EVT'
+export type EvidenceClass = 'observed_fact' | 'contextual_event'
+export type EvidenceValueUnit = MetricUnit | 'percentage_points'
+
+export interface EvidenceWindow {
+  start: string
+  end: string
+}
+
+export interface EvidenceValue {
+  key: string
+  label: string
+  value: number | string | null
+  unit: EvidenceValueUnit | null
+  note: string | null
+}
+
+export interface EvidenceMethod {
+  kind: 'metric_calculation' | 'anomaly_detector' | 'contribution' | 'timeline_event'
+  name: string
+  version: string | null
+  formula: string | null
+  description: string | null
+}
+
+export interface EventDetailProvenance {
+  evidence_type: 'EVT'
+  source: 'incident_timeline'
+  event_type: string
+  occurred_at: string
+  details: Record<string, string>
+}
+
+/** Typed per evidence type by the backend; rendered verbatim, never re-derived. */
+export type EvidenceDetailProvenance =
+  | { evidence_type: 'MTR'; computed_at: string; metric: Provenance }
+  | { evidence_type: 'ANOM'; detected_at: string; threshold: Provenance }
+  | { evidence_type: 'SEG'; statement: string; contribution: Provenance }
+  | EventDetailProvenance
+
+export interface EvidenceDetailOut {
+  evidence_id: string
+  evidence_type: EvidenceType
+  evidence_class: EvidenceClass
+  label: string
+  window: EvidenceWindow | null
+  baseline_window: EvidenceWindow | null
+  dimensions: Record<string, string>
+  sample_size: number | null
+  sample_sufficient: boolean | null
+  values: EvidenceValue[]
+  method: EvidenceMethod
+  related_evidence_ids: string[]
+  contextual_disclaimer: string | null
+  provenance: EvidenceDetailProvenance
+}
+
+// --- action proposals (backend/app/schemas/actions.py) --------------------------------
+
+export type ActionType = 'open_investigation'
+export type ActionStatus =
+  | 'proposed'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'executing'
+  | 'succeeded'
+  | 'failed'
+
+export type ActionProposalIssueCode =
+  | 'UNSUPPORTED_ACTION_TYPE'
+  | 'EVIDENCE_MISSING'
+  | 'EVIDENCE_NOT_IN_BRIEF'
+  | 'EVIDENCE_UNRESOLVED'
+  | 'ANOMALY_EVIDENCE_MISSING'
+  | 'CAUSAL_LANGUAGE'
+  | 'ACTION_CLAIMED_COMPLETE'
+
+export interface ActionProposalIssue {
+  code: ActionProposalIssueCode
+  message: string
+  evidence_id?: string | null
+  phrase?: string | null
+  field?: 'action_type' | 'title' | 'description' | 'rationale' | 'investigation_steps' | null
+}
+
+export interface ActionSourceBriefOut {
+  id: number
+  headline: string
+  status: BriefStatus
+  analysis_window_start: string
+  analysis_window_end: string
+}
+
+export interface ActionOut {
+  id: number
+  action_type: ActionType
+  title: string
+  description: string
+  rationale: string
+  investigation_steps: string[]
+  evidence_ids: string[]
+  status: ActionStatus
+  source_brief: ActionSourceBriefOut
+  created_at: string
+  updated_at: string
+}
+
+export interface ActionListOut {
+  items: ActionOut[]
+  limit: number
+  offset: number
+}
+
+export interface ActionListParams {
+  status?: ActionStatus
+  limit?: number
+  offset?: number
+}
+
+// --- human approval and execution (backend/app/schemas/actions.py, Spec 12) ----------
+
+/** Transitions the backend would currently accept. A presentation hint only. */
+export type ActionOperation = 'approve' | 'reject' | 'execute'
+export type EditableActionField = 'title' | 'description' | 'investigation_steps'
+
+/** Human edits applied at approval. Send only fields the reviewer actually changed. */
+export interface ActionEdits {
+  title?: string
+  description?: string
+  investigation_steps?: string[]
+}
+
+export interface ApproveActionRequest {
+  /** Demo reviewer identity; V1 has no authentication, so this is recorded, not verified. */
+  reviewer: string
+  comment?: string | null
+  edits?: ActionEdits | null
+}
+
+export interface RejectActionRequest {
+  reviewer: string
+  comment?: string | null
+}
+
+export interface ApprovalOut {
+  id: number
+  decision: 'approved' | 'rejected'
+  reviewer: string
+  comment: string | null
+  edited_fields: EditableActionField[]
+  decided_at: string
+}
+
+export type ExecutionStatus = 'executing' | 'succeeded' | 'failed'
+
+export interface ExecutionOut {
+  id: number
+  status: ExecutionStatus
+  adapter_key: string
+  /** Mock investigation reference, e.g. `INV-0001`. */
+  external_ref: string | null
+  error_message: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+export type AuditActorType = 'human' | 'system' | 'ai'
+
+export interface AuditEventOut {
+  id: number
+  actor_type: AuditActorType
+  actor_id: string | null
+  event_type: string
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export interface ActionDetailOut extends ActionOut {
+  approval: ApprovalOut | null
+  execution: ExecutionOut | null
+  /** Oldest first. */
+  audit_events: AuditEventOut[]
+  allowed_operations: ActionOperation[]
+}
+
+/** One reason a human edit was refused (422 `ACTION_EDIT_REJECTED`). */
+export interface ActionEditIssue {
+  code: 'CAUSAL_LANGUAGE' | 'ACTION_CLAIMED_COMPLETE'
+  message: string
+  phrase: string
+  field: EditableActionField
+}
+
+/**
+ * Error body fields beyond `code`/`message` that some endpoints add:
+ * `existing_action_id` on 409 `ACTION_ALREADY_PROPOSED`,
+ * `issues` on 422 `ACTION_PROPOSAL_REJECTED` / `ACTION_EDIT_REJECTED`,
+ * `current_status` on 409 `ACTION_INVALID_TRANSITION`,
+ * `execution` on 502 `ACTION_EXECUTION_FAILED`.
+ */
+export interface ApiErrorBody extends ErrorResponse {
+  existing_action_id?: number | null
+  issues?: ActionProposalIssue[] | ActionEditIssue[]
+  current_status?: ActionStatus | null
+  execution?: ExecutionOut
+}

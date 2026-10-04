@@ -1,10 +1,17 @@
 /** Typed API fixtures shaped like the seeded canonical Billing scenario. */
 
 import type {
+  ActionDetailOut,
+  ActionOut,
+  ApprovalOut,
+  AuditEventOut,
+  ExecutionOut,
   AnomalyDetailOut,
   AnomalyOut,
+  BriefOut,
   ContributorAnalysisResponse,
   DashboardOverviewResponse,
+  EvidenceDetailOut,
   MetricSnapshotOut,
   TrendPoint,
 } from '../../src/types/api'
@@ -282,4 +289,289 @@ export function contributors(): ContributorAnalysisResponse {
     ],
     unranked_families: [],
   }
+}
+
+export function brief(overrides: Partial<BriefOut> = {}): BriefOut {
+  return {
+    id: 12,
+    analysis_window_start: WINDOW_START,
+    analysis_window_end: WINDOW_END,
+    headline: 'Billing ticket volume is elevated',
+    summary: 'Billing volume rose against the seven-day baseline.',
+    status: 'valid',
+    model_name: 'test-model',
+    validation_errors: [],
+    created_at: WINDOW_END,
+    claims: [
+      {
+        ordinal: 0,
+        claim_type: 'observation',
+        text: 'Billing ticket volume rose 36.7% against baseline.',
+        evidence_ids: ['MTR-000101', 'ANOM-000007'],
+        validation_status: 'valid',
+        validation_errors: [],
+      },
+      {
+        ordinal: 1,
+        claim_type: 'inference',
+        text: 'A billing deploy coincided with the spike and warrants investigation.',
+        evidence_ids: ['EVT-000004'],
+        validation_status: 'valid',
+        validation_errors: [],
+      },
+    ],
+    ...overrides,
+  }
+}
+
+export function invalidBrief(): BriefOut {
+  const issue = {
+    code: 'EVIDENCE_NOT_IN_BUNDLE' as const,
+    message: 'MTR-999999 is not in the Evidence Bundle allow-list.',
+    evidence_id: 'MTR-999999',
+  }
+  const base = brief()
+  return {
+    ...base,
+    id: 13,
+    status: 'invalid',
+    validation_errors: [{ ...issue, claim_ordinal: 1 }],
+    claims: [
+      base.claims[0]!,
+      {
+        ordinal: 1,
+        claim_type: 'observation',
+        text: 'Backlog doubled.',
+        evidence_ids: ['MTR-999999'],
+        validation_status: 'invalid',
+        validation_errors: [issue],
+      },
+    ],
+  }
+}
+
+export function metricEvidence(): EvidenceDetailOut {
+  return {
+    evidence_id: 'MTR-000101',
+    evidence_type: 'MTR',
+    evidence_class: 'observed_fact',
+    label: 'Ticket volume (category=billing)',
+    window: { start: WINDOW_START, end: WINDOW_END },
+    baseline_window: { start: '2026-09-25T00:00:00Z', end: WINDOW_START },
+    dimensions: { category: 'billing' },
+    sample_size: 412,
+    sample_sufficient: true,
+    values: [
+      { key: 'value', label: 'Current value', value: 412, unit: 'count', note: null },
+      { key: 'baseline_value', label: 'Baseline value', value: 301.5, unit: 'count', note: null },
+      {
+        key: 'change_pct',
+        label: 'Change vs baseline',
+        value: null,
+        unit: 'percent',
+        note: 'Baseline is zero; percentage change is undefined.',
+      },
+    ],
+    method: {
+      kind: 'metric_calculation',
+      name: 'ticket_volume',
+      version: '1',
+      formula: 'count(tickets created in window)',
+      description: null,
+    },
+    related_evidence_ids: [],
+    contextual_disclaimer: null,
+    provenance: {
+      evidence_type: 'MTR',
+      computed_at: WINDOW_END,
+      metric: { schema_version: 1, source: { table: 'tickets' } },
+    },
+  }
+}
+
+export function eventEvidence(): EvidenceDetailOut {
+  return {
+    evidence_id: 'EVT-000004',
+    evidence_type: 'EVT',
+    evidence_class: 'contextual_event',
+    label: 'Billing API 2.4 deployment',
+    window: null,
+    baseline_window: null,
+    dimensions: { product: 'billing_api' },
+    sample_size: null,
+    sample_sufficient: null,
+    values: [
+      { key: 'event_type', label: 'Event type', value: 'deployment', unit: null, note: null },
+    ],
+    method: {
+      kind: 'timeline_event',
+      name: 'incident_timeline',
+      version: null,
+      formula: null,
+      description: null,
+    },
+    related_evidence_ids: [],
+    contextual_disclaimer:
+      'Timeline context only. It occurred near the analysis window; no link to the metric change has been established.',
+    provenance: {
+      evidence_type: 'EVT',
+      source: 'incident_timeline',
+      event_type: 'deployment',
+      occurred_at: '2026-10-01T18:00:00Z',
+      details: { version: '2.4.0' },
+    },
+  }
+}
+
+export function action(overrides: Partial<ActionOut> = {}): ActionOut {
+  return {
+    id: 5,
+    action_type: 'open_investigation',
+    title: 'Investigate EMEA Billing ticket spike',
+    description: 'Review billing ticket volume against the seven-day baseline.',
+    rationale: 'The anomaly and a coinciding deploy warrant investigation.',
+    investigation_steps: ['Review the top contributing segment', 'Check the billing deploy'],
+    evidence_ids: ['ANOM-000007', 'MTR-000101', 'EVT-000004'],
+    status: 'pending_approval',
+    source_brief: {
+      id: 12,
+      headline: 'Billing ticket volume is elevated',
+      status: 'valid',
+      analysis_window_start: WINDOW_START,
+      analysis_window_end: WINDOW_END,
+    },
+    created_at: WINDOW_END,
+    updated_at: WINDOW_END,
+    ...overrides,
+  }
+}
+
+const PROPOSED_AT = '2026-10-03T00:00:00Z'
+const DECIDED_AT = '2026-10-03T09:15:00Z'
+const EXECUTED_AT = '2026-10-03T09:16:00Z'
+
+function auditEvent(
+  id: number,
+  event_type: string,
+  actor_type: AuditEventOut['actor_type'],
+  actor_id: string | null,
+  created_at: string,
+  payload: Record<string, unknown> = {},
+): AuditEventOut {
+  return { id, actor_type, actor_id, event_type, payload, created_at }
+}
+
+const PROPOSED_EVENTS: AuditEventOut[] = [
+  auditEvent(1, 'action.proposed', 'ai', 'action_proposer', PROPOSED_AT),
+  auditEvent(2, 'action.status_changed', 'system', null, PROPOSED_AT, {
+    from: 'proposed',
+    to: 'pending_approval',
+  }),
+]
+
+export function approval(overrides: Partial<ApprovalOut> = {}): ApprovalOut {
+  return {
+    id: 3,
+    decision: 'approved',
+    reviewer: 'Operations Manager',
+    comment: 'Worth a look before the weekly review.',
+    edited_fields: ['title'],
+    decided_at: DECIDED_AT,
+    ...overrides,
+  }
+}
+
+export function execution(overrides: Partial<ExecutionOut> = {}): ExecutionOut {
+  return {
+    id: 4,
+    status: 'succeeded',
+    adapter_key: 'mock_investigation',
+    external_ref: 'INV-0001',
+    error_message: null,
+    started_at: EXECUTED_AT,
+    finished_at: EXECUTED_AT,
+    ...overrides,
+  }
+}
+
+/** A drafted investigation awaiting a human decision. */
+export function actionDetail(overrides: Partial<ActionDetailOut> = {}): ActionDetailOut {
+  return {
+    ...action(),
+    approval: null,
+    execution: null,
+    audit_events: PROPOSED_EVENTS,
+    allowed_operations: ['approve', 'reject'],
+    ...overrides,
+  }
+}
+
+const APPROVED_EVENTS: AuditEventOut[] = [
+  ...PROPOSED_EVENTS,
+  auditEvent(3, 'action.edited', 'human', 'Operations Manager', DECIDED_AT, {
+    fields: ['title'],
+  }),
+  auditEvent(4, 'action.approved', 'human', 'Operations Manager', DECIDED_AT),
+]
+
+export function approvedActionDetail(overrides: Partial<ActionDetailOut> = {}): ActionDetailOut {
+  return actionDetail({
+    title: 'Investigate EMEA Billing ticket spike (edited)',
+    status: 'approved',
+    approval: approval(),
+    audit_events: APPROVED_EVENTS,
+    allowed_operations: ['execute'],
+    ...overrides,
+  })
+}
+
+export function succeededActionDetail(overrides: Partial<ActionDetailOut> = {}): ActionDetailOut {
+  return approvedActionDetail({
+    status: 'succeeded',
+    execution: execution(),
+    audit_events: [
+      ...APPROVED_EVENTS,
+      auditEvent(5, 'action.execution_started', 'system', 'mock_investigation', EXECUTED_AT),
+      auditEvent(6, 'action.execution_succeeded', 'system', 'mock_investigation', EXECUTED_AT, {
+        external_ref: 'INV-0001',
+      }),
+    ],
+    allowed_operations: [],
+    ...overrides,
+  })
+}
+
+export function failedActionDetail(overrides: Partial<ActionDetailOut> = {}): ActionDetailOut {
+  return approvedActionDetail({
+    status: 'failed',
+    execution: execution({
+      status: 'failed',
+      external_ref: null,
+      error_message: 'Mock investigation adapter is unavailable.',
+    }),
+    audit_events: [
+      ...APPROVED_EVENTS,
+      auditEvent(5, 'action.execution_started', 'system', 'mock_investigation', EXECUTED_AT),
+      auditEvent(6, 'action.execution_failed', 'system', 'mock_investigation', EXECUTED_AT),
+    ],
+    allowed_operations: [],
+    ...overrides,
+  })
+}
+
+export function rejectedActionDetail(overrides: Partial<ActionDetailOut> = {}): ActionDetailOut {
+  return actionDetail({
+    status: 'rejected',
+    approval: approval({
+      decision: 'rejected',
+      comment: 'Already covered by the billing incident review.',
+      edited_fields: [],
+    }),
+    audit_events: [
+      ...PROPOSED_EVENTS,
+      auditEvent(3, 'action.rejected', 'human', 'Operations Manager', DECIDED_AT),
+    ],
+    allowed_operations: [],
+    ...overrides,
+  })
 }

@@ -3,10 +3,12 @@ import { NavLink, Outlet } from 'react-router-dom'
 const LINKS = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/anomalies', label: 'Anomalies', end: false },
+  { to: '/briefs', label: 'Briefs', end: false },
+  { to: '/actions', label: 'Actions', end: false },
 ] as const
 
 /** Sections that later specs attach real views to. */
-const UPCOMING = ['Briefs', 'Actions', 'System'] as const
+const UPCOMING = ['System'] as const
 
 function linkClass({ isActive }: { isActive: boolean }): string {
   return isActive

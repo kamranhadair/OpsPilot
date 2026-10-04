@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { snapshot } from '../../tests/fixtures/api'
-import { formatChange, formatDimensions, formatMetricValue, formatScore } from './format'
+import {
+  formatChange,
+  formatDimensions,
+  formatEvidenceValue,
+  formatMetricValue,
+  formatScore,
+} from './format'
 
 describe('format', () => {
   it('formats values by unit', () => {
@@ -32,5 +38,20 @@ describe('format', () => {
     expect(formatDimensions({ region: 'emea', customer_tier: 'enterprise' })).toBe(
       'Region: EMEA · Tier: Enterprise',
     )
+  })
+})
+
+describe('formatEvidenceValue', () => {
+  it('formats backend values by unit without deriving anything', () => {
+    expect(formatEvidenceValue({ value: 412, unit: 'count' })).toBe('412')
+    expect(formatEvidenceValue({ value: 77.3, unit: 'percent' })).toBe('77.3%')
+    expect(formatEvidenceValue({ value: 4.25, unit: 'percentage_points' })).toBe('4.3 pp')
+    expect(formatEvidenceValue({ value: 3, unit: null })).toBe('3')
+    expect(formatEvidenceValue({ value: 'high', unit: null })).toBe('High')
+    expect(formatEvidenceValue({ value: 'billing_api', unit: null })).toBe('Billing API')
+  })
+
+  it('never fabricates a number for a missing value', () => {
+    expect(formatEvidenceValue({ value: null, unit: 'percent' })).toBe('Unavailable')
   })
 })

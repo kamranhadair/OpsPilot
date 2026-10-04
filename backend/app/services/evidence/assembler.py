@@ -36,6 +36,7 @@ from app.schemas.metrics import MetricSnapshotOut
 from app.services.anomalies.service import LIST_MAX_LIMIT, anomaly_out
 from app.services.contributors.errors import ContributorsNotComputedError
 from app.services.contributors.service import ContributorService
+from app.services.evidence.events import event_details
 from app.services.evidence.resolver import EvidenceResolver
 from app.services.metrics.definitions import METRIC_REGISTRY
 from app.services.metrics.engine import analysis_window, to_utc
@@ -45,8 +46,6 @@ from app.services.metrics.service import MetricsService, snapshot_out
 MAX_ANOMALIES = 5
 CONTRIBUTORS_PER_FAMILY = 3
 MAX_RELATED_EVENTS = 5
-# Incident metadata is allow-listed field by field; nothing else reaches the model.
-EVENT_DETAIL_KEYS = ("service", "version", "change_ref", "summary")
 
 _METRIC_ORDER = {key: index for index, key in enumerate(METRIC_REGISTRY)}
 
@@ -375,10 +374,7 @@ def _contributor_item(
 
 
 def _event_item(incident: Incident, current: WindowOut) -> RelatedEventEvidence:
-    metadata = incident.metadata_json
-    details = {
-        key: value for key in EVENT_DETAIL_KEYS if isinstance(value := metadata.get(key), str)
-    }
+    details = event_details(incident)
     return RelatedEventEvidence(
         evidence_id=incident.evidence_id,
         label=incident.title,

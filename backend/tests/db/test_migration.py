@@ -96,6 +96,9 @@ def test_required_indexes_exist(engine: Engine, table: str, index: str) -> None:
         ("metric_snapshots", "analysis_signature"),
         ("anomalies", "evidence_id"),
         ("anomaly_contributors", "evidence_id"),
+        ("proposed_actions", "brief_id"),
+        ("approvals", "action_id"),
+        ("action_executions", "action_id"),
     ],
 )
 def test_unique_constraints_exist(engine: Engine, table: str, column: str) -> None:
