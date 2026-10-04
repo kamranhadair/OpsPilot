@@ -16,9 +16,15 @@ import type {
   ApproveActionRequest,
   ContributorAnalysisResponse,
   DashboardOverviewResponse,
+  EvaluationLatestResponse,
   EvidenceDetailOut,
   HealthResponse,
+  LLMTraceListOut,
+  LLMTraceListParams,
   RejectActionRequest,
+  SummaryPeriod,
+  SystemHealthResponse,
+  SystemSummaryOut,
 } from '../types/api'
 
 const API_BASE_URL: string =
@@ -192,4 +198,37 @@ export function rejectAction(
  */
 export function executeAction(actionId: number): Promise<ActionDetailOut> {
   return postJson<ActionDetailOut>(`/api/actions/${actionId}/execute`)
+}
+
+/**
+ * The newest stored evaluation report. `state: "not_run"` when none exists;
+ * 500 `EVAL_REPORT_INVALID` when the stored report is corrupt.
+ */
+export function getLatestEvaluation(): Promise<EvaluationLatestResponse> {
+  return request<EvaluationLatestResponse>('/api/evaluations/latest')
+}
+
+/**
+ * Detailed demo/dev readiness. 503 `DATABASE_UNAVAILABLE` (body carries `health`);
+ * 404 `SYSTEM_ENDPOINTS_DISABLED` outside demo/development environments.
+ */
+export function getSystemHealth(): Promise<SystemHealthResponse> {
+  return request<SystemHealthResponse>('/api/system/health')
+}
+
+/** Paginated, safe LLM trace metadata, newest first (ordering is the backend's). */
+export function listLlmTraces(params: LLMTraceListParams = {}): Promise<LLMTraceListOut> {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value))
+  }
+  const qs = query.toString()
+  return request<LLMTraceListOut>(`/api/system/llm-traces${qs ? `?${qs}` : ''}`)
+}
+
+/** Backend-aggregated LLM call and action execution summary for a period. */
+export function getSystemSummary(period: SummaryPeriod = '7d'): Promise<SystemSummaryOut> {
+  return request<SystemSummaryOut>(
+    `/api/system/summary?period=${encodeURIComponent(period)}`,
+  )
 }

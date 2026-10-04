@@ -4,8 +4,9 @@ All values come from the environment (or the repository-root ``.env`` file).
 No secret is ever hard-coded here.
 """
 
+from decimal import Decimal
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -47,6 +48,19 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     openai_max_retries: int = Field(default=2, ge=0, le=5)
 
+    # Spec 13 evaluation. Reports are written relative to the backend directory. The
+    # optional model-based citation judge never runs unless explicitly enabled here
+    # *and* the LLM is configured; otherwise it reports not_run.
+    eval_reports_dir: str = "evals/reports"
+    eval_model_enabled: bool = False
+
+    # Spec 14 observability. Provider prices change, so none is hard-coded: cost is
+    # estimated only when both per-million-token USD rates are configured here.
+    openai_input_cost_per_1m: Decimal | None = Field(default=None, ge=0)
+    openai_output_cost_per_1m: Decimal | None = Field(default=None, ge=0)
+    log_level: str = "INFO"
+    log_format: Literal["json", "text"] = "json"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, value: object) -> object:
@@ -60,6 +74,13 @@ class Settings(BaseSettings):
         """True only when both an API key and a model name are present and non-blank."""
         key = self.openai_api_key.get_secret_value().strip() if self.openai_api_key else ""
         return bool(key and self.openai_model and self.openai_model.strip())
+
+    @property
+    def cost_estimation_configured(self) -> bool:
+        """True only when both token prices are configured; otherwise cost stays null."""
+        return (
+            self.openai_input_cost_per_1m is not None and self.openai_output_cost_per_1m is not None
+        )
 
     @property
     def is_demo_environment(self) -> bool:

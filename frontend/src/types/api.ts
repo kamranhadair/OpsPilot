@@ -481,4 +481,260 @@ export interface ApiErrorBody extends ErrorResponse {
   issues?: ActionProposalIssue[] | ActionEditIssue[]
   current_status?: ActionStatus | null
   execution?: ExecutionOut
+  /** Spec 14: present on 503 `DATABASE_UNAVAILABLE` from `/api/system/health`. */
+  health?: SystemHealthResponse
+}
+
+// ---------------------------------------------------------------------------
+// Spec 13: evaluation report (mirrors backend/app/schemas/evaluations.py)
+// ---------------------------------------------------------------------------
+
+export type EvalCaseStatus = 'pass' | 'fail' | 'not_run' | 'error'
+export type EvalSuiteName = 'all' | 'deterministic' | 'ai'
+export type EvalOverallStatus = 'pass' | 'fail' | 'incomplete'
+export type EvalSeedState = 'complete' | 'empty' | 'inconsistent' | 'unavailable'
+
+export type EvalCategory =
+  | 'metric_correctness'
+  | 'anomaly_detection'
+  | 'false_positive'
+  | 'contributor_attribution'
+  | 'citation_validity'
+  | 'causal_guardrail'
+  | 'action_grounding'
+  | 'approval_boundary'
+
+/** A count measured inside one case, e.g. high/critical flags among checked metrics. */
+export interface EvalCaseTally {
+  flagged: number
+  checked: number
+}
+
+export interface EvalCaseResult {
+  case_id: string
+  title: string
+  category: EvalCategory
+  status: EvalCaseStatus
+  expected: string
+  observed: string | null
+  /** Why the case failed, errored or did not run. */
+  failure_reason: string | null
+  evidence: string[]
+  tally: EvalCaseTally | null
+}
+
+export interface EvalCategorySummary {
+  category: EvalCategory
+  total: number
+  passed: number
+  failed: number
+  errored: number
+  not_run: number
+  /** passed / (passed + failed + errored); null when nothing was executed. */
+  pass_rate: number | null
+}
+
+export interface EvalRatioMetric {
+  key: string
+  label: string
+  numerator: number
+  denominator: number
+  /** numerator / denominator as a 0..1 fraction; null when the denominator is 0. */
+  value: number | null
+  description: string
+}
+
+export interface EvalCountMetric {
+  key: string
+  label: string
+  passed: number
+  failed: number
+  errored: number
+  not_run: number
+  description: string
+}
+
+export interface EvalSeedInfo {
+  expected_version: string
+  case_version: string
+  observed_state: EvalSeedState
+  observed_version: string | null
+  matches: boolean
+}
+
+export interface EvalReplayAnomaly {
+  metric_key: string
+  display_name: string
+  filters: Record<string, string>
+  severity: AnomalySeverity
+  score: number | null
+}
+
+export interface EvalReplayDay {
+  window_start: string
+  window_end: string
+  status: 'ok' | 'no_data'
+  detail: string | null
+  anomalies: EvalReplayAnomaly[]
+  high_or_critical_count: number
+}
+
+export interface EvalReplaySummary {
+  status: 'completed' | 'not_run' | 'error'
+  reason: string | null
+  days_requested: number
+  days: EvalReplayDay[]
+  note: string
+}
+
+/** Optional semantic citation-support judgement. Never part of deterministic totals. */
+export interface EvalModelBasedSection {
+  label: 'model_based'
+  status: 'completed' | 'not_run' | 'error'
+  reason: string | null
+  model_name: string | null
+  prompt_version: string | null
+  cases: EvalCaseResult[]
+}
+
+export interface EvaluationReport {
+  schema_version: 1
+  run_id: string
+  suite: EvalSuiteName
+  generated_at: string
+  overall_status: EvalOverallStatus
+  /** True when any case, replay or judge errored. */
+  partial_failure: boolean
+  seed: EvalSeedInfo
+  cases: EvalCaseResult[]
+  categories: EvalCategorySummary[]
+  ratios: EvalRatioMetric[]
+  counts: EvalCountMetric[]
+  replay: EvalReplaySummary | null
+  model_based: EvalModelBasedSection
+  notes: string[]
+}
+
+/** `GET /api/evaluations/latest`; 500 `EVAL_REPORT_INVALID` when the stored file is corrupt. */
+export type EvaluationLatestResponse =
+  | { state: 'available'; report: EvaluationReport; message: string | null }
+  | { state: 'not_run'; report: null; message: string | null }
+
+// ---------------------------------------------------------------------------
+// Spec 14: system observability (mirrors backend/app/schemas/system.py)
+// ---------------------------------------------------------------------------
+
+export type SystemOverallStatus = 'ok' | 'degraded' | 'error'
+
+/**
+ * `GET /api/system/health`. 503 `DATABASE_UNAVAILABLE` carries this body under
+ * `health`; 404 `SYSTEM_ENDPOINTS_DISABLED` outside demo/dev environments.
+ */
+export interface SystemHealthResponse {
+  status: SystemOverallStatus
+  service: string
+  environment: string
+  database: { status: 'ok' | 'error'; migration_revision: string | null }
+  llm: { configured: boolean; model: string | null }
+  cost_estimation: { configured: boolean }
+  evaluation: { model_enabled: boolean; latest_report: 'available' | 'not_run' | 'invalid' }
+  checked_at: string
+}
+
+export type TraceStatus = 'success' | 'error'
+
+export interface LLMTraceOut {
+  id: number
+  operation: string
+  model_name: string
+  status: TraceStatus
+  latency_ms: number
+  input_tokens: number | null
+  output_tokens: number | null
+  estimated_cost_usd: number | null
+  error_code: string | null
+  error_message: string | null
+  brief_id: number | null
+  action_id: number | null
+  request_id: string | null
+  created_at: string
+}
+
+export interface LLMTraceListOut {
+  items: LLMTraceOut[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface LLMTraceListParams {
+  operation?: string
+  status?: TraceStatus
+  since?: string
+  until?: string
+  limit?: number
+  offset?: number
+}
+
+export type SummaryPeriod = '24h' | '7d' | '30d' | 'all'
+
+export interface LatencySummary {
+  avg: number
+  p50: number
+  p95: number
+  max: number
+}
+
+export interface OperationSummary {
+  operation: string
+  total_calls: number
+  error_count: number
+  error_rate: number | null
+  avg_latency_ms: number | null
+  input_tokens_total: number
+  output_tokens_total: number
+  estimated_cost_usd: number | null
+}
+
+export interface LLMSummary {
+  total_calls: number
+  success_count: number
+  error_count: number
+  /** Fraction 0..1; null when there were no calls. */
+  error_rate: number | null
+  /** Null when there were no calls. */
+  latency_ms: LatencySummary | null
+  input_tokens_total: number
+  output_tokens_total: number
+  calls_missing_usage: number
+  cost_configured: boolean
+  /** Null when no trace in the period has a cost. */
+  estimated_cost_usd: number | null
+  calls_missing_cost: number
+  by_operation: OperationSummary[]
+}
+
+export interface ExecutionFailureOut {
+  execution_id: number
+  action_id: number
+  adapter_key: string
+  error_code: string | null
+  error_message: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+export interface ExecutionSummary {
+  total: number
+  succeeded: number
+  failed: number
+  recent_failures: ExecutionFailureOut[]
+}
+
+export interface SystemSummaryOut {
+  period: SummaryPeriod
+  window_start: string | null
+  window_end: string
+  llm: LLMSummary
+  executions: ExecutionSummary
 }

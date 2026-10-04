@@ -27,3 +27,7 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Evaluation reports (volatile run output; regenerate with `python -m app.evals.run`)
+backend/evals/reports/*
+!backend/evals/reports/.gitkeep

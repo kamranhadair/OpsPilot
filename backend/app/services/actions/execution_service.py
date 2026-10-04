@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.observability import stage_timer
 from app.integrations.investigations.base import (
     InvestigationAdapter,
     InvestigationAdapterError,
@@ -75,15 +76,20 @@ class ActionExecutionService:
             UnsupportedActionTypeError, AdapterNotConfiguredError: nothing was executed.
             ActionExecutionFailedError: the adapter failed; the failure is persisted.
         """
-        try:
-            started = self._start(action_id)
-        except ActionError:
-            self.session.rollback()
-            raise
-        if started is not None:
-            action, execution, request, adapter = started
-            self._finish(action, execution, request, adapter)
-        return load_action_detail(self.session, action_id)
+        with stage_timer("action_execution", action_id=action_id) as stage:
+            try:
+                started = self._start(action_id)
+            except ActionError:
+                self.session.rollback()
+                raise
+            if started is None:
+                stage.update(outcome="replayed")
+            else:
+                action, execution, request, adapter = started
+                stage.update(adapter_key=adapter.adapter_key, execution_id=execution.id)
+                self._finish(action, execution, request, adapter)
+                stage.update(outcome=action.status.value)
+            return load_action_detail(self.session, action_id)
 
     def _start(
         self, action_id: int

@@ -5,8 +5,12 @@ import {
   formatChange,
   formatDimensions,
   formatEvidenceValue,
+  formatFraction,
+  formatLatencyMs,
   formatMetricValue,
   formatScore,
+  formatTokens,
+  formatUsd,
 } from './format'
 
 describe('format', () => {
@@ -53,5 +57,39 @@ describe('formatEvidenceValue', () => {
 
   it('never fabricates a number for a missing value', () => {
     expect(formatEvidenceValue({ value: null, unit: 'percent' })).toBe('Unavailable')
+  })
+})
+
+describe('formatFraction', () => {
+  it('formats a backend fraction as a percentage', () => {
+    expect(formatFraction(1)).toBe('100.0%')
+    expect(formatFraction(0)).toBe('0.0%')
+    expect(formatFraction(0.041666)).toBe('4.2%')
+  })
+
+  it('shows an unmeasured rate as n/a', () => {
+    expect(formatFraction(null)).toBe('n/a')
+  })
+})
+
+describe('observability formatting', () => {
+  it('formats latency in ms below a second and seconds above', () => {
+    expect(formatLatencyMs(842.4)).toBe('842 ms')
+    expect(formatLatencyMs(0)).toBe('0 ms')
+    expect(formatLatencyMs(2150)).toBe('2.15 s')
+    expect(formatLatencyMs(null)).toBe('n/a')
+  })
+
+  it('formats cost in USD and shows null as an em dash', () => {
+    expect(formatUsd(0.0123)).toBe('$0.0123')
+    expect(formatUsd(1.5)).toBe('$1.50')
+    expect(formatUsd(0)).toBe('$0.00')
+    expect(formatUsd(null)).toBe('—')
+  })
+
+  it('formats token counts and shows null as not reported', () => {
+    expect(formatTokens(12345)).toBe('12,345')
+    expect(formatTokens(0)).toBe('0')
+    expect(formatTokens(null)).toBe('not reported')
   })
 })

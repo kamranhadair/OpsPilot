@@ -8,11 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.logging import configure_logging
+from app.core.request_context import REQUEST_ID_HEADER, RequestContextMiddleware
 
 
 def create_app() -> FastAPI:
     """Build the OpsPilot FastAPI application."""
     settings = get_settings()
+    configure_logging(settings)
 
     app = FastAPI(
         title="OpsPilot API",
@@ -26,7 +29,10 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=[REQUEST_ID_HEADER],
     )
+    # Added last, so it is outermost: every response (including CORS) gets a request ID.
+    app.add_middleware(RequestContextMiddleware)
 
     app.include_router(api_router, prefix=settings.api_prefix)
 

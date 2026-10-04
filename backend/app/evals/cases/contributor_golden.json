@@ -1,0 +1,27 @@
+{
+  "suite": "contributor_attribution",
+  "seed_version": "1",
+  "description": "Expected top contributors for the planted Billing volume spike (seed version 1).",
+  "cases": [
+    {
+      "case_id": "contributor.emea_enterprise_top",
+      "title": "EMEA Enterprise is the top region+tier contributor",
+      "window_end": "2026-10-04T00:00:00Z",
+      "filters": {"category": "billing"},
+      "metric_key": "ticket_volume",
+      "family_key": "region+customer_tier",
+      "expected_segment": {"region": "emea", "customer_tier": "enterprise"},
+      "top_k": 1
+    },
+    {
+      "case_id": "contributor.emea_region_top",
+      "title": "EMEA is the top region contributor",
+      "window_end": "2026-10-04T00:00:00Z",
+      "filters": {"category": "billing"},
+      "metric_key": "ticket_volume",
+      "family_key": "region",
+      "expected_segment": {"region": "emea"},
+      "top_k": 1
+    }
+  ]
+}

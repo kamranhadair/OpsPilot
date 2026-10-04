@@ -1,0 +1,144 @@
+{
+  "suite": "anomaly_detection",
+  "seed_version": "1",
+  "description": "Golden facts about the planted demo scenario (seed version 1). Planted cases must be detected. Normal cases are designated quiet slices/days: the non-Billing queues on the final day and every detection slice on each full pre-deployment day. None should become high/critical; any that does is a reported false positive.",
+  "planted": [
+    {
+      "case_id": "anomaly.planted_billing_volume",
+      "title": "Planted Billing spike: ticket volume detected",
+      "window_end": "2026-10-04T00:00:00Z",
+      "filters": {
+        "category": "billing"
+      },
+      "metric_key": "ticket_volume",
+      "expected_severities": [
+        "high",
+        "critical"
+      ]
+    },
+    {
+      "case_id": "anomaly.planted_billing_sla",
+      "title": "Planted Billing spike: SLA breach rate hits the critical rule",
+      "window_end": "2026-10-04T00:00:00Z",
+      "filters": {
+        "category": "billing"
+      },
+      "metric_key": "sla_breach_rate",
+      "expected_severities": [
+        "critical"
+      ]
+    }
+  ],
+  "normal": [
+    {
+      "case_id": "normal.technical_final_day",
+      "title": "Technical queue on the final day",
+      "window_end": "2026-10-04T00:00:00Z",
+      "slices": [
+        {
+          "category": "technical"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.integration_final_day",
+      "title": "Integration queue on the final day",
+      "window_end": "2026-10-04T00:00:00Z",
+      "slices": [
+        {
+          "category": "integration"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.account_final_day",
+      "title": "Account queue on the final day",
+      "window_end": "2026-10-04T00:00:00Z",
+      "slices": [
+        {
+          "category": "account"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.pre_deployment_2026-09-27",
+      "title": "All detection slices on 2026-09-27 (before the deployment)",
+      "window_end": "2026-09-28T00:00:00Z",
+      "slices": [
+        {},
+        {
+          "category": "billing"
+        },
+        {
+          "category": "technical"
+        },
+        {
+          "category": "integration"
+        },
+        {
+          "category": "account"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.pre_deployment_2026-09-28",
+      "title": "All detection slices on 2026-09-28 (before the deployment)",
+      "window_end": "2026-09-29T00:00:00Z",
+      "slices": [
+        {},
+        {
+          "category": "billing"
+        },
+        {
+          "category": "technical"
+        },
+        {
+          "category": "integration"
+        },
+        {
+          "category": "account"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.pre_deployment_2026-09-29",
+      "title": "All detection slices on 2026-09-29 (before the deployment)",
+      "window_end": "2026-09-30T00:00:00Z",
+      "slices": [
+        {},
+        {
+          "category": "billing"
+        },
+        {
+          "category": "technical"
+        },
+        {
+          "category": "integration"
+        },
+        {
+          "category": "account"
+        }
+      ]
+    },
+    {
+      "case_id": "normal.pre_deployment_2026-09-30",
+      "title": "All detection slices on 2026-09-30 (before the deployment)",
+      "window_end": "2026-10-01T00:00:00Z",
+      "slices": [
+        {},
+        {
+          "category": "billing"
+        },
+        {
+          "category": "technical"
+        },
+        {
+          "category": "integration"
+        },
+        {
+          "category": "account"
+        }
+      ]
+    }
+  ]
+}

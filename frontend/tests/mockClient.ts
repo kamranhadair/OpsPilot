@@ -1,5 +1,7 @@
 import { vi } from 'vitest'
 
+import { llmTraceList, systemHealth, systemSummary } from './fixtures/api'
+
 /** Every network call is replaced; each test sets the responses it needs. */
 vi.mock('../src/api/client', async () => {
   const actual = await vi.importActual<typeof import('../src/api/client')>('../src/api/client')
@@ -20,6 +22,10 @@ vi.mock('../src/api/client', async () => {
     approveAction: vi.fn(),
     rejectAction: vi.fn(),
     executeAction: vi.fn(),
+    getLatestEvaluation: vi.fn(),
+    getSystemHealth: vi.fn(),
+    listLlmTraces: vi.fn(),
+    getSystemSummary: vi.fn(),
   }
 })
 
@@ -41,6 +47,10 @@ export const api = {
   approveAction: vi.mocked(client.approveAction),
   rejectAction: vi.mocked(client.rejectAction),
   executeAction: vi.mocked(client.executeAction),
+  getLatestEvaluation: vi.mocked(client.getLatestEvaluation),
+  getSystemHealth: vi.mocked(client.getSystemHealth),
+  listLlmTraces: vi.mocked(client.listLlmTraces),
+  getSystemSummary: vi.mocked(client.getSystemSummary),
 }
 
 export const pending = () => new Promise<never>(() => {})
@@ -48,4 +58,7 @@ export const pending = () => new Promise<never>(() => {})
 export function resetApi() {
   for (const mock of Object.values(api)) mock.mockReset()
   api.getHealth.mockResolvedValue({ status: 'ok', service: 'opspilot-api', database: 'ok' })
+  api.getSystemHealth.mockResolvedValue(systemHealth())
+  api.listLlmTraces.mockResolvedValue(llmTraceList())
+  api.getSystemSummary.mockResolvedValue(systemSummary())
 }

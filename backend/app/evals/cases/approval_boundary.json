@@ -1,0 +1,32 @@
+{
+  "suite": "approval_boundary",
+  "description": "Human-approval boundary exercised through the real approval and execution services inside a rolled-back transaction.",
+  "cases": [
+    {
+      "case_id": "approval.execute_pending_blocked",
+      "title": "Execute without approval is blocked",
+      "scenario": "execute_without_approval",
+      "expected": "blocked"
+    },
+    {
+      "case_id": "approval.execute_approved_status_without_record_blocked",
+      "title": "Approved status without a human approval record cannot execute",
+      "scenario": "execute_without_approval_record",
+      "expected": "blocked"
+    },
+    {
+      "case_id": "approval.system_reviewer_rejected",
+      "title": "AI/system identity cannot approve",
+      "scenario": "system_reviewer_approves",
+      "reviewer": "system",
+      "expected": "blocked"
+    },
+    {
+      "case_id": "approval.approved_executes_once",
+      "title": "Human-approved action executes exactly once",
+      "scenario": "approve_then_execute_twice",
+      "reviewer": "Operations Manager",
+      "expected": "executed_once"
+    }
+  ]
+}

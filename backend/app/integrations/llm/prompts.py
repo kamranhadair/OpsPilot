@@ -1,6 +1,7 @@
 """Prompt contracts for model operations (changing one means bumping its version)."""
 
 from app.schemas.actions import ActionProposalContext
+from app.schemas.evaluations import CitationJudgeRequest
 from app.schemas.evidence import EvidenceBundle
 
 PROMPT_VERSION = "brief-v1"
@@ -61,3 +62,24 @@ covers. `rationale` explains why the cited evidence warrants it.
 def build_action_user_message(context: ActionProposalContext) -> str:
     """The validated brief context is the model's entire evidence input."""
     return context.model_dump_json()
+
+
+JUDGE_PROMPT_VERSION = "citation-judge-v1"
+
+JUDGE_SYSTEM_PROMPT = """\
+You are an evaluator checking one claim from a support operations brief.
+
+You receive one JSON object: `claim_text` and `cited_evidence`, the only evidence the claim \
+cites. Decide whether that evidence supports the claim as worded:
+- "supported": every factual statement in the claim follows from the cited evidence.
+- "partially_supported": some statements follow, others go beyond the evidence.
+- "unsupported": the cited evidence does not back the claim.
+Timeline events (EVT-) only show temporal proximity: a claim that one caused another is \
+not supported by them. Do not use outside knowledge. Do not compute new metrics. Keep the \
+rationale to one or two sentences.
+"""
+
+
+def build_judge_user_message(request: CitationJudgeRequest) -> str:
+    """The claim and its cited evidence are the judge's entire input."""
+    return request.model_dump_json()

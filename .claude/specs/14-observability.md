@@ -1,5 +1,5 @@
 ---
-status: planned
+status: implemented
 step: 14
 title: Observability
 owner: backend-engineer

@@ -7,16 +7,17 @@ exact bundle the model received.
 """
 
 import logging
+import time
 from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.observability import stage_timer
 from app.integrations.llm.base import BriefLLMClient, LLMError, LLMNotConfiguredError
 from app.models.brief import Brief, BriefClaim
-from app.models.enums import BriefStatus, ClaimValidationStatus, TraceStatus
-from app.models.observability import LLMTrace
-from app.repositories.brief import BriefRepository, LLMTraceRepository
+from app.models.enums import BriefStatus, ClaimValidationStatus, LLMOperation
+from app.repositories.brief import BriefRepository
 from app.schemas.briefs import BriefClaimOut, BriefGenerateResponse, BriefOut, ValidationIssue
 from app.services.briefs.errors import (
     BriefEvidenceUnavailableError,
@@ -26,8 +27,9 @@ from app.services.briefs.errors import (
 from app.services.briefs.validator import validate_brief
 from app.services.evidence.assembler import EvidenceBundleAssembler
 from app.services.evidence.resolver import EvidenceResolver
+from app.services.observability.traces import LLMTraceRecorder
 
-OPERATION = "brief_generation"
+OPERATION = LLMOperation.BRIEF_GENERATION.value
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,7 @@ class BriefService:
         self.settings = settings
         self.client_factory = client_factory
         self.briefs = BriefRepository(session)
-        self.traces = LLMTraceRepository(session)
+        self.traces = LLMTraceRecorder(session, settings)
 
     def generate(self) -> BriefGenerateResponse:
         """Generate, persist and validate a brief from the current Evidence Bundle.
@@ -86,7 +88,12 @@ class BriefService:
         """
         if not self.settings.llm_configured:
             raise LLMNotConfiguredError("OPENAI_API_KEY and OPENAI_MODEL must be configured.")
+        with stage_timer("brief_generation") as stage:
+            response = self._generate()
+            stage.update(brief_id=response.id, brief_status=response.status.value)
+            return response
 
+    def _generate(self) -> BriefGenerateResponse:
         bundle = EvidenceBundleAssembler(
             self.session, event_lookback_hours=self.settings.evidence_event_lookback_hours
         ).assemble(None)
@@ -95,22 +102,17 @@ class BriefService:
                 "No metrics have been computed, so there is no evidence to brief."
             )
 
-        model_name = self.settings.openai_model or ""
+        if self.client_factory is None:
+            raise LLMNotConfiguredError("No LLM client is available.")
+        started = time.monotonic()
         try:
-            if self.client_factory is None:
-                raise LLMNotConfiguredError("No LLM client is available.")
             result = self.client_factory().generate_brief(bundle)
         except LLMError as exc:
-            self.traces.add(
-                LLMTrace(
-                    brief_id=None,
-                    operation=OPERATION,
-                    model_name=model_name,
-                    latency_ms=0,
-                    status=TraceStatus.ERROR,
-                    error_code=exc.code,
-                    error_message=exc.message[:1000],
-                )
+            self.traces.failure(
+                LLMOperation.BRIEF_GENERATION,
+                exc,
+                model_name=self.settings.openai_model or "",
+                latency_ms=int((time.monotonic() - started) * 1000),
             )
             self.session.commit()
             raise
@@ -142,14 +144,20 @@ class BriefService:
         self.briefs.add_claims(brief.id, claims)
 
         cited = {i for claim in output.claims for i in claim.evidence_ids}
-        validation = validate_brief(
-            headline=output.headline,
-            summary=output.summary,
-            claims=output.claims,
-            bundle=bundle,
-            persisted_ids=EvidenceResolver(self.session).existing(cited),
-            brief_window=window,
-        )
+        with stage_timer("brief_validation", brief_id=brief.id) as stage:
+            validation = validate_brief(
+                headline=output.headline,
+                summary=output.summary,
+                claims=output.claims,
+                bundle=bundle,
+                persisted_ids=EvidenceResolver(self.session).existing(cited),
+                brief_window=window,
+            )
+            stage.update(
+                brief_status=validation.status.value,
+                claim_count=len(claims),
+                issue_codes=sorted({i.code for i in validation.all_issues}),
+            )
         for claim, claim_result in zip(claims, validation.claims, strict=True):
             claim.validation_status = claim_result.status
             claim.validation_errors_json = [
@@ -172,16 +180,13 @@ class BriefService:
                 ),
             )
 
-        self.traces.add(
-            LLMTrace(
-                brief_id=brief.id,
-                operation=OPERATION,
-                model_name=result.model_name,
-                latency_ms=result.latency_ms,
-                input_tokens=result.input_tokens,
-                output_tokens=result.output_tokens,
-                status=TraceStatus.SUCCESS,
-            )
+        self.traces.success(
+            LLMOperation.BRIEF_GENERATION,
+            model_name=result.model_name,
+            latency_ms=result.latency_ms,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            brief_id=brief.id,
         )
         self.session.commit()
         return BriefGenerateResponse(

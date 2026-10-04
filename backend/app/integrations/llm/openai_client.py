@@ -1,7 +1,8 @@
 """OpenAI implementation of the LLM client boundary. The only module that imports ``openai``.
 
-One client serves every model operation (brief generation, action proposal); each
-operation has its own prompt and structured-output schema.
+One client serves every model operation (brief generation, action proposal and the
+optional evaluation citation judge); each operation has its own prompt and
+structured-output schema.
 """
 
 import logging
@@ -15,6 +16,7 @@ from app.core.config import Settings
 from app.integrations.llm.base import (
     ActionLLMResult,
     BriefLLMResult,
+    CitationJudgeResult,
     LLMMalformedOutputError,
     LLMNotConfiguredError,
     LLMProviderError,
@@ -24,11 +26,14 @@ from app.integrations.llm.base import (
 from app.integrations.llm.prompts import (
     ACTION_SYSTEM_PROMPT,
     BRIEF_SYSTEM_PROMPT,
+    JUDGE_SYSTEM_PROMPT,
     build_action_user_message,
+    build_judge_user_message,
     build_user_message,
 )
 from app.schemas.actions import ActionProposalContext, ActionProposalOutput
 from app.schemas.briefs import BriefDraftOutput
+from app.schemas.evaluations import CitationJudgeRequest, CitationSupportJudgement
 from app.schemas.evidence import EvidenceBundle
 
 logger = logging.getLogger(__name__)
@@ -80,6 +85,18 @@ class OpenAILLMClient:
             latency_ms=parsed.latency_ms,
         )
 
+    def judge_citation_support(self, request: CitationJudgeRequest) -> CitationJudgeResult:
+        parsed = self._parse(
+            JUDGE_SYSTEM_PROMPT, build_judge_user_message(request), CitationSupportJudgement
+        )
+        return CitationJudgeResult(
+            output=parsed.output,
+            model_name=parsed.model_name,
+            latency_ms=parsed.latency_ms,
+            input_tokens=parsed.input_tokens,
+            output_tokens=parsed.output_tokens,
+        )
+
     def _parse[OutputT: BaseModel](
         self, system: str, user: str, text_format: type[OutputT]
     ) -> _Parsed[OutputT]:
@@ -94,24 +111,32 @@ class OpenAILLMClient:
                 text_format=text_format,
             )
         except openai.APITimeoutError as exc:
-            raise LLMTimeoutError("The model provider timed out.") from exc
+            raise LLMTimeoutError(
+                "The model provider timed out.", latency_ms=_elapsed_ms(started)
+            ) from exc
         except openai.RateLimitError as exc:
-            raise LLMRateLimitedError("The model provider rate-limited the request.") from exc
+            raise LLMRateLimitedError(
+                "The model provider rate-limited the request.", latency_ms=_elapsed_ms(started)
+            ) from exc
         except ValidationError as exc:
             raise LLMMalformedOutputError(
-                "The model returned output that failed validation."
+                "The model returned output that failed validation.",
+                latency_ms=_elapsed_ms(started),
             ) from exc
         except openai.APIError as exc:
             status = getattr(exc, "status_code", None)
             logger.warning("LLM provider error (%s): %s", type(exc).__name__, status)
             raise LLMProviderError(
-                f"The model provider request failed ({type(exc).__name__})."
+                f"The model provider request failed ({type(exc).__name__}).",
+                latency_ms=_elapsed_ms(started),
             ) from exc
-        latency_ms = max(0, int((time.monotonic() - started) * 1000))
+        latency_ms = _elapsed_ms(started)
 
         parsed = response.output_parsed
         if parsed is None:
-            raise LLMMalformedOutputError("The model returned no structured output.")
+            raise LLMMalformedOutputError(
+                "The model returned no structured output.", latency_ms=latency_ms
+            )
         usage = response.usage
         return _Parsed(
             output=parsed,
@@ -120,6 +145,10 @@ class OpenAILLMClient:
             output_tokens=usage.output_tokens if usage else None,
             latency_ms=latency_ms,
         )
+
+
+def _elapsed_ms(started: float) -> int:
+    return max(0, int((time.monotonic() - started) * 1000))
 
 
 # Spec 09 name, kept for existing imports.
@@ -133,4 +162,9 @@ def get_brief_llm_client(settings: Settings) -> OpenAILLMClient:
 
 def get_action_llm_client(settings: Settings) -> OpenAILLMClient:
     """Factory used by the action API layer; tests substitute a fake."""
+    return OpenAILLMClient(settings)
+
+
+def get_citation_judge_client(settings: Settings) -> OpenAILLMClient:
+    """Factory used by the optional model-based evaluation; tests substitute a fake."""
     return OpenAILLMClient(settings)

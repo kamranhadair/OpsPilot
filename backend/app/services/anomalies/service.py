@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.core.observability import stage_timer
 from app.models import Anomaly, MetricSnapshot
 from app.models.enums import AnomalySeverity, AnomalyStatus, EvidenceType
 from app.repositories.anomaly_repository import AnomalyRepository
@@ -117,6 +118,17 @@ class AnomalyService:
     # --- detect ----------------------------------------------------------------------
 
     def detect(self, window_end: datetime | None) -> AnomalyDetectResponse:
+        """Timed entry point; see ``_detect``."""
+        with stage_timer("anomaly_detection") as stage:
+            response = self._detect(window_end)
+            stage.update(
+                detected_count=response.detected_count,
+                reused_count=response.reused_count,
+                skipped_count=response.skipped_count,
+            )
+            return response
+
+    def _detect(self, window_end: datetime | None) -> AnomalyDetectResponse:
         """Detect anomalies for one analysis window across every detection slice.
 
         Raises the metrics errors (no data, window out of range) unchanged.

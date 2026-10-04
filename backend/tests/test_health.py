@@ -34,3 +34,15 @@ def test_health_database_unavailable(client_with_broken_db: TestClient) -> None:
 def test_health_route_is_under_api_prefix(client: TestClient) -> None:
     """Application endpoints are only reachable under the /api prefix."""
     assert client.get("/health").status_code == 404
+
+
+def test_system_health_returns_503_with_typed_body_when_database_down(
+    client_with_broken_db: TestClient,
+) -> None:
+    response = client_with_broken_db.get("/api/system/health")
+    assert response.status_code == 503
+    body = response.json()
+    assert body["code"] == "DATABASE_UNAVAILABLE"
+    assert body["health"]["status"] == "error"
+    assert body["health"]["database"] == {"status": "error", "migration_revision": None}
+    assert "connection refused" not in response.text

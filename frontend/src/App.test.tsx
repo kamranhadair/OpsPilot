@@ -26,9 +26,11 @@ describe('App routes', () => {
     )
     expect(within(nav).getByRole('link', { name: 'Briefs' })).toHaveAttribute('href', '/briefs')
     expect(within(nav).getByRole('link', { name: 'Actions' })).toHaveAttribute('href', '/actions')
-    // Later-spec sections stay non-interactive.
-    expect(within(nav).queryByRole('link', { name: 'System' })).not.toBeInTheDocument()
-    expect(within(nav).getByText('System')).toHaveAttribute('aria-disabled', 'true')
+    expect(within(nav).getByRole('link', { name: 'Evaluations' })).toHaveAttribute(
+      'href',
+      '/evaluations',
+    )
+    expect(within(nav).getByRole('link', { name: 'System' })).toHaveAttribute('href', '/system')
   })
 
   it('/ renders the operations overview', async () => {
@@ -47,6 +49,18 @@ describe('App routes', () => {
     renderAt('/anomalies/ANOM-000007')
     expect(await screen.findByRole('heading', { name: 'Ticket volume' })).toBeInTheDocument()
     expect(api.getAnomaly).toHaveBeenCalledWith('ANOM-000007')
+  })
+
+  it('/evaluations renders the evaluation report page', async () => {
+    api.getLatestEvaluation.mockResolvedValue({
+      state: 'not_run',
+      report: null,
+      message: 'No evaluation report has been generated yet.',
+    })
+    renderAt('/evaluations')
+    expect(screen.getByRole('heading', { level: 2, name: 'Evaluations' })).toBeInTheDocument()
+    expect(await screen.findByText('No evaluation report yet')).toBeInTheDocument()
+    expect(api.getLatestEvaluation).toHaveBeenCalledTimes(1)
   })
 
   it('unknown routes show a not-found page', () => {

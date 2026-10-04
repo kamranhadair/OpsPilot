@@ -25,6 +25,9 @@ class _StubSession:
             raise OperationalError("SELECT 1", {}, Exception("connection refused"))
         return None
 
+    def rollback(self) -> None:
+        return None
+
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:

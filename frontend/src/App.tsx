@@ -8,6 +8,8 @@ import { AnomalyExplorerPage } from './features/anomalies/AnomalyExplorerPage'
 import { BriefPage } from './features/briefs/BriefPage'
 import { LatestBriefPage } from './features/briefs/LatestBriefPage'
 import { OverviewPage } from './features/dashboard/OverviewPage'
+import { EvaluationsPage } from './features/evaluations/EvaluationsPage'
+import { SystemPage } from './features/system/SystemPage'
 
 function NotFoundPage() {
   return (
@@ -33,6 +35,8 @@ export function AppRoutes() {
         <Route path="briefs/:briefId" element={<BriefPage />} />
         <Route path="actions" element={<ActionsListPage />} />
         <Route path="actions/:actionId" element={<ActionDetailPage />} />
+        <Route path="evaluations" element={<EvaluationsPage />} />
+        <Route path="system" element={<SystemPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

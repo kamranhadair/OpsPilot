@@ -5,10 +5,9 @@ const LINKS = [
   { to: '/anomalies', label: 'Anomalies', end: false },
   { to: '/briefs', label: 'Briefs', end: false },
   { to: '/actions', label: 'Actions', end: false },
+  { to: '/evaluations', label: 'Evaluations', end: false },
+  { to: '/system', label: 'System', end: false },
 ] as const
-
-/** Sections that later specs attach real views to. */
-const UPCOMING = ['System'] as const
 
 function linkClass({ isActive }: { isActive: boolean }): string {
   return isActive
@@ -34,11 +33,6 @@ export function AppShell() {
                   <NavLink to={link.to} end={link.end} className={linkClass}>
                     {link.label}
                   </NavLink>
-                </li>
-              ))}
-              {UPCOMING.map((section) => (
-                <li key={section} className="pb-1 text-slate-400">
-                  <span aria-disabled="true">{section}</span>
                 </li>
               ))}
             </ul>

@@ -1,0 +1,64 @@
+{
+  "suite": "action_guardrails",
+  "description": "Action proposals checked by the deterministic Spec 11 policy. Ungrounded proposals must be rejected with the expected issue codes; a grounded control must pass.",
+  "brief_evidence_ids": ["MTR-000001", "ANOM-000001", "SEG-000001", "EVT-000001"],
+  "persisted_ids": ["MTR-000001", "ANOM-000001", "SEG-000001", "EVT-000001"],
+  "cases": [
+    {
+      "case_id": "action.ungrounded_evidence",
+      "title": "Proposal citing evidence the brief never cited is rejected",
+      "proposal": {
+        "action_type": "open_investigation",
+        "title": "Investigate EMEA Billing ticket spike",
+        "description": "Review Billing ticket volume against its baseline.",
+        "rationale": "The anomaly warrants investigation.",
+        "investigation_steps": ["Review the top contributing segment"],
+        "evidence_ids": ["ANOM-000001", "MTR-424242"]
+      },
+      "expected_rejected": true,
+      "expected_codes": ["EVIDENCE_NOT_IN_BRIEF"]
+    },
+    {
+      "case_id": "action.no_anomaly_evidence",
+      "title": "Proposal not anchored to a detected anomaly is rejected",
+      "proposal": {
+        "action_type": "open_investigation",
+        "title": "Investigate EMEA Billing ticket spike",
+        "description": "Review Billing ticket volume against its baseline.",
+        "rationale": "The segment share warrants investigation.",
+        "investigation_steps": ["Review the top contributing segment"],
+        "evidence_ids": ["SEG-000001"]
+      },
+      "expected_rejected": true,
+      "expected_codes": ["ANOMALY_EVIDENCE_MISSING"]
+    },
+    {
+      "case_id": "action.unsupported_type",
+      "title": "Action type outside the allow-list is rejected",
+      "proposal": {
+        "action_type": "rollback_deployment",
+        "title": "Roll back the Billing API deployment",
+        "description": "Revert the deployment that coincided with the spike.",
+        "rationale": "The anomaly warrants investigation.",
+        "investigation_steps": ["Revert the release"],
+        "evidence_ids": ["ANOM-000001"]
+      },
+      "expected_rejected": true,
+      "expected_codes": ["UNSUPPORTED_ACTION_TYPE"]
+    },
+    {
+      "case_id": "action.grounded_control",
+      "title": "Grounded open_investigation proposal is accepted",
+      "proposal": {
+        "action_type": "open_investigation",
+        "title": "Investigate EMEA Billing ticket spike",
+        "description": "Review Billing ticket volume against its baseline for the window.",
+        "rationale": "The anomaly and its top segment coincided with a deployment and warrant investigation.",
+        "investigation_steps": ["Review the top contributing segment", "Check changes near the window"],
+        "evidence_ids": ["ANOM-000001", "SEG-000001", "EVT-000001"]
+      },
+      "expected_rejected": false,
+      "expected_codes": []
+    }
+  ]
+}

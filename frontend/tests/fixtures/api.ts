@@ -11,7 +11,15 @@ import type {
   BriefOut,
   ContributorAnalysisResponse,
   DashboardOverviewResponse,
+  EvaluationReport,
+  EvalCaseResult,
   EvidenceDetailOut,
+  ExecutionFailureOut,
+  LLMSummary,
+  LLMTraceListOut,
+  LLMTraceOut,
+  SystemHealthResponse,
+  SystemSummaryOut,
   MetricSnapshotOut,
   TrendPoint,
 } from '../../src/types/api'
@@ -574,4 +582,292 @@ export function rejectedActionDetail(overrides: Partial<ActionDetailOut> = {}): 
     allowed_operations: [],
     ...overrides,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Spec 13: evaluation report, trimmed from a real `python -m app.evals.run --suite all` run.
+// ---------------------------------------------------------------------------
+
+export function evalCase(overrides: Partial<EvalCaseResult> = {}): EvalCaseResult {
+  return {
+    case_id: 'metric.volume_doubles',
+    title: 'Ticket volume doubles against a flat baseline',
+    category: 'metric_correctness',
+    status: 'pass',
+    expected: 'value=20, baseline_value=10, change_pct=100, baseline_zero=False',
+    observed: 'value=20, baseline_value=10, change_pct=100, baseline_zero=False',
+    failure_reason: null,
+    evidence: [],
+    tally: null,
+    ...overrides,
+  }
+}
+
+export function evaluationReport(overrides: Partial<EvaluationReport> = {}): EvaluationReport {
+  return {
+    schema_version: 1,
+    run_id: 'f053e710-5ba3-44b9-a692-2d963eef1d2d',
+    suite: 'all',
+    generated_at: '2026-10-04T05:50:08.597935Z',
+    overall_status: 'fail',
+    partial_failure: true,
+    seed: {
+      expected_version: '1',
+      case_version: '1',
+      observed_state: 'complete',
+      observed_version: '1',
+      matches: true,
+    },
+    cases: [
+      evalCase(),
+      evalCase({
+        case_id: 'approval.execute_pending_blocked',
+        title: 'Execute without approval is blocked',
+        category: 'approval_boundary',
+        status: 'error',
+        expected: 'blocked',
+        observed: null,
+        failure_reason:
+          'ProgrammingError: column "investigation_steps_json" of relation "proposed_actions" does not exist',
+      }),
+      evalCase({
+        case_id: 'contributor.billing_top_k',
+        title: 'Billing ranks in the top contributors',
+        category: 'contributor_attribution',
+        status: 'fail',
+        expected: 'category=billing within top 3',
+        observed: 'category=billing ranked 5',
+        failure_reason: 'Expected segment ranked outside the top 3.',
+      }),
+      evalCase({
+        case_id: 'anomaly.planted_billing_spike',
+        title: 'Planted Billing spike is detected',
+        category: 'anomaly_detection',
+        status: 'not_run',
+        expected: 'severity=high',
+        observed: null,
+        failure_reason: 'Demo seed missing; dataset case skipped.',
+      }),
+    ],
+    categories: [
+      {
+        category: 'metric_correctness',
+        total: 6,
+        passed: 6,
+        failed: 0,
+        errored: 0,
+        not_run: 0,
+        pass_rate: 1.0,
+      },
+      {
+        category: 'anomaly_detection',
+        total: 2,
+        passed: 0,
+        failed: 0,
+        errored: 0,
+        not_run: 2,
+        pass_rate: null,
+      },
+      {
+        category: 'approval_boundary',
+        total: 4,
+        passed: 0,
+        failed: 0,
+        errored: 4,
+        not_run: 0,
+        pass_rate: 0.0,
+      },
+    ],
+    ratios: [
+      {
+        key: 'metric_fixture_pass_rate',
+        label: 'Metric fixture pass rate',
+        numerator: 6,
+        denominator: 6,
+        value: 1.0,
+        description: 'Hand-computed metric fixtures reproduced exactly by the metric engine.',
+      },
+      {
+        key: 'planted_anomaly_recall',
+        label: 'Planted anomaly recall',
+        numerator: 0,
+        denominator: 0,
+        value: null,
+        description: 'Planted demo anomalies detected at the expected severity.',
+      },
+      {
+        key: 'high_critical_false_positive_rate',
+        label: 'High/critical false positives on normal cases',
+        numerator: 1,
+        denominator: 24,
+        value: 0.041666666666666664,
+        description:
+          'High/critical anomalies among metrics checked on designated normal queue/days. Lower is better; the numerator is the false-positive count.',
+      },
+    ],
+    counts: [
+      {
+        key: 'causation_guard',
+        label: 'Runtime causation guard',
+        passed: 3,
+        failed: 0,
+        errored: 0,
+        not_run: 0,
+        description: 'Causal wording rejected and cautious correlation wording accepted.',
+      },
+    ],
+    replay: {
+      status: 'completed',
+      reason: null,
+      days_requested: 2,
+      note: 'Read-only replay: each day uses the production 24h window and its 7-day baseline; nothing is persisted.',
+      days: [
+        {
+          window_start: '2026-09-27T00:00:00Z',
+          window_end: '2026-09-28T00:00:00Z',
+          status: 'no_data',
+          detail: 'No tickets in the window.',
+          anomalies: [],
+          high_or_critical_count: 0,
+        },
+        {
+          window_start: '2026-09-28T00:00:00Z',
+          window_end: '2026-09-29T00:00:00Z',
+          status: 'ok',
+          detail: null,
+          anomalies: [
+            {
+              metric_key: 'sla_breach_rate',
+              display_name: 'SLA breach rate',
+              filters: {},
+              severity: 'high',
+              score: 5.333458,
+            },
+            {
+              metric_key: 'sla_breach_rate',
+              display_name: 'SLA breach rate',
+              filters: { category: 'billing' },
+              severity: 'high',
+              score: 15.695489,
+            },
+            {
+              metric_key: 'ticket_volume',
+              display_name: 'Ticket volume',
+              filters: { category: 'integration' },
+              severity: 'medium',
+              score: 46.327685,
+            },
+          ],
+          high_or_critical_count: 2,
+        },
+      ],
+    },
+    model_based: {
+      label: 'model_based',
+      status: 'not_run',
+      reason: 'disabled: EVAL_MODEL_ENABLED is not true',
+      model_name: null,
+      prompt_version: null,
+      cases: [],
+    },
+    notes: [
+      'Small synthetic demo dataset: these results show expected behaviour on planted scenarios and fixtures. They are not statistically significant performance estimates.',
+    ],
+    ...overrides,
+  }
+}
+
+// --- Spec 14: system observability -------------------------------------------------
+
+export function systemHealth(overrides: Partial<SystemHealthResponse> = {}): SystemHealthResponse {
+  return {
+    status: 'ok',
+    service: 'opspilot-api',
+    environment: 'development',
+    database: { status: 'ok', migration_revision: '0009_llm_trace_context' },
+    llm: { configured: true, model: 'gpt-4o-mini' },
+    cost_estimation: { configured: false },
+    evaluation: { model_enabled: false, latest_report: 'available' },
+    checked_at: '2026-10-03T12:00:00Z',
+    ...overrides,
+  }
+}
+
+export function llmTrace(overrides: Partial<LLMTraceOut> = {}): LLMTraceOut {
+  return {
+    id: 1,
+    operation: 'brief_generation',
+    model_name: 'gpt-4o-mini',
+    status: 'success',
+    latency_ms: 1840,
+    input_tokens: 3120,
+    output_tokens: 642,
+    estimated_cost_usd: null,
+    error_code: null,
+    error_message: null,
+    brief_id: 7,
+    action_id: null,
+    request_id: 'req-0001',
+    created_at: '2026-10-03T09:15:00Z',
+    ...overrides,
+  }
+}
+
+export function llmTraceList(overrides: Partial<LLMTraceListOut> = {}): LLMTraceListOut {
+  return { items: [], total: 0, limit: 25, offset: 0, ...overrides }
+}
+
+export function llmSummary(overrides: Partial<LLMSummary> = {}): LLMSummary {
+  return {
+    total_calls: 12,
+    success_count: 10,
+    error_count: 2,
+    error_rate: 0.16666666666666666,
+    latency_ms: { avg: 1520.5, p50: 1400, p95: 3100, max: 4200 },
+    input_tokens_total: 31200,
+    output_tokens_total: 6420,
+    calls_missing_usage: 2,
+    cost_configured: false,
+    estimated_cost_usd: null,
+    calls_missing_cost: 12,
+    by_operation: [
+      {
+        operation: 'brief_generation',
+        total_calls: 8,
+        error_count: 1,
+        error_rate: 0.125,
+        avg_latency_ms: 1700,
+        input_tokens_total: 25000,
+        output_tokens_total: 5000,
+        estimated_cost_usd: null,
+      },
+    ],
+    ...overrides,
+  }
+}
+
+export function executionFailure(
+  overrides: Partial<ExecutionFailureOut> = {},
+): ExecutionFailureOut {
+  return {
+    execution_id: 3,
+    action_id: 5,
+    adapter_key: 'mock_investigation',
+    error_code: 'ADAPTER_FAILED',
+    error_message: 'Mock investigation adapter failed.',
+    started_at: '2026-10-03T10:00:00Z',
+    finished_at: '2026-10-03T10:00:01Z',
+    ...overrides,
+  }
+}
+
+export function systemSummary(overrides: Partial<SystemSummaryOut> = {}): SystemSummaryOut {
+  return {
+    period: '7d',
+    window_start: '2026-09-26T12:00:00Z',
+    window_end: '2026-10-03T12:00:00Z',
+    llm: llmSummary(),
+    executions: { total: 0, succeeded: 0, failed: 0, recent_failures: [] },
+    ...overrides,
+  }
 }

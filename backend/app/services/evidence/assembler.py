@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.observability import stage_timer
 from app.models import Incident, MetricSnapshot
 from app.models.enums import AnomalyStatus
 from app.repositories.anomaly_repository import AnomalyRepository
@@ -101,6 +102,20 @@ class EvidenceBundleAssembler:
         self.resolver = EvidenceResolver(session)
 
     def assemble(self, window_end: datetime | None = None) -> EvidenceBundle:
+        """Timed entry point; see ``_assemble``. Logs section sizes, never content."""
+        with stage_timer("evidence_assembly") as stage:
+            bundle = self._assemble(window_end)
+            stage.update(
+                metric_count=len(bundle.metrics),
+                anomaly_count=len(bundle.anomalies),
+                contributor_count=len(bundle.contributors),
+                related_event_count=len(bundle.related_events),
+                excluded_count=len(bundle.excluded),
+                bundle_bytes=len(bundle.model_dump_json().encode("utf-8")),
+            )
+            return bundle
+
+    def _assemble(self, window_end: datetime | None) -> EvidenceBundle:
         """The bundle for ``window_end``, or for the latest computed window when omitted."""
         limits = BundleLimits(
             max_anomalies=MAX_ANOMALIES,

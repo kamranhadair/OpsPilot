@@ -24,12 +24,11 @@ from app.models.enums import (
     BriefStatus,
     ClaimValidationStatus,
     EvidenceType,
-    TraceStatus,
+    LLMOperation,
 )
-from app.models.observability import LLMTrace
 from app.repositories.action import ActionRepository
 from app.repositories.audit_log import AuditLogRepository
-from app.repositories.brief import BriefRepository, LLMTraceRepository
+from app.repositories.brief import BriefRepository
 from app.schemas.actions import (
     ActionListOut,
     ActionOut,
@@ -51,8 +50,9 @@ from app.services.actions.policy import ALLOWED_ACTION_TYPES, validate_proposal
 from app.services.actions.state_machine import ensure_transition
 from app.services.evidence.resolver import EvidenceResolver
 from app.services.evidence_ids import parse_evidence_id
+from app.services.observability.traces import LLMTraceRecorder
 
-OPERATION = "action_proposal"
+OPERATION = LLMOperation.ACTION_PROPOSAL.value
 ENTITY = "proposed_action"
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class ActionProposalService:
         self.client_factory = client_factory
         self.actions = ActionRepository(session)
         self.briefs = BriefRepository(session)
-        self.traces = LLMTraceRepository(session)
+        self.traces = LLMTraceRecorder(session, settings)
         self.audit = AuditLogRepository(session)
 
     def propose(self, brief_id: int) -> ActionOut:
@@ -155,29 +155,22 @@ class ActionProposalService:
         try:
             result = self.client_factory().propose_action(context)
         except LLMError as exc:
-            self.traces.add(
-                LLMTrace(
-                    brief_id=brief_id,
-                    operation=OPERATION,
-                    model_name=self.settings.openai_model or "",
-                    latency_ms=max(0, int((time.monotonic() - started) * 1000)),
-                    status=TraceStatus.ERROR,
-                    error_code=exc.code,
-                    error_message=exc.message[:1000],
-                )
+            self.traces.failure(
+                LLMOperation.ACTION_PROPOSAL,
+                exc,
+                model_name=self.settings.openai_model or "",
+                latency_ms=int((time.monotonic() - started) * 1000),
+                brief_id=brief_id,
             )
             self.session.commit()
             raise
-        self.traces.add(
-            LLMTrace(
-                brief_id=brief_id,
-                operation=OPERATION,
-                model_name=result.model_name,
-                latency_ms=result.latency_ms,
-                input_tokens=result.input_tokens,
-                output_tokens=result.output_tokens,
-                status=TraceStatus.SUCCESS,
-            )
+        trace = self.traces.success(
+            LLMOperation.ACTION_PROPOSAL,
+            model_name=result.model_name,
+            latency_ms=result.latency_ms,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            brief_id=brief_id,
         )
 
         output = result.output
@@ -225,6 +218,7 @@ class ActionProposalService:
             self.session.commit()
             self._ensure_no_proposal(brief_id)
             raise
+        self.traces.link_action(trace, action.id)
         self.audit.append(
             actor_type=ActorType.AI,
             actor_id=result.model_name,

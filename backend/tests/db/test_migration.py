@@ -67,6 +67,22 @@ def test_downgrade_then_upgrade_is_clean(engine: Engine, test_db_url: str) -> No
     assert set(inspect(engine).get_table_names()) == DOMAIN_TABLES | {"alembic_version"}
 
 
+def test_observability_migration_downgrades_and_reapplies(engine: Engine, test_db_url: str) -> None:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    assert_safe_test_database(settings.test_database_url, settings.database_url)
+
+    try:
+        migrations.downgrade(test_db_url, "0006")
+        columns = {c["name"] for c in inspect(engine).get_columns("llm_traces")}
+        assert not {"action_id", "request_id"} & columns
+    finally:
+        migrations.upgrade(test_db_url, "head")
+    columns = {c["name"] for c in inspect(engine).get_columns("llm_traces")}
+    assert {"action_id", "request_id"} <= columns
+
+
 @pytest.mark.parametrize(
     ("table", "index"),
     [
@@ -78,6 +94,9 @@ def test_downgrade_then_upgrade_is_clean(engine: Engine, test_db_url: str) -> No
         ("tickets", "ix_tickets_sla_breached_created_at"),
         ("metric_snapshots", "ix_metric_snapshots_metric_key_window_end"),
         ("anomalies", "ix_anomalies_status_detected_at"),
+        ("llm_traces", "ix_llm_traces_created_at_id"),
+        ("llm_traces", "ix_llm_traces_operation_created_at"),
+        ("llm_traces", "ix_llm_traces_action_id"),
     ],
 )
 def test_required_indexes_exist(engine: Engine, table: str, index: str) -> None:

@@ -1,0 +1,160 @@
+{
+  "suite": "brief_guardrails",
+  "description": "Brief claims validated against a fixed Evidence Bundle with the deterministic Spec 10 validator. Fabricated citations and causal wording must be rejected; grounded correlation wording must pass.",
+  "bundle": {
+    "analysis_window": {
+      "current": {"start": "2026-10-03T00:00:00Z", "end": "2026-10-04T00:00:00Z"},
+      "baseline": {"start": "2026-09-26T00:00:00Z", "end": "2026-10-03T00:00:00Z"},
+      "event_lookback_hours": 72
+    },
+    "metrics": [
+      {
+        "evidence_id": "MTR-000001",
+        "label": "Ticket volume (billing)",
+        "window": {"start": "2026-10-03T00:00:00Z", "end": "2026-10-04T00:00:00Z"},
+        "dimensions": {"category": "billing"},
+        "provenance": {"source": "eval-fixture"},
+        "role": "anomaly_trigger",
+        "metric_key": "ticket_volume",
+        "unit": "count",
+        "value": 120.0,
+        "baseline_value": 40.0,
+        "change_pct": 200.0,
+        "change_pp": null,
+        "baseline_zero": false,
+        "baseline_empty": false,
+        "sample_size": 120,
+        "sample_sufficient": true
+      }
+    ],
+    "anomalies": [
+      {
+        "evidence_id": "ANOM-000001",
+        "label": "High anomaly: Ticket volume (billing)",
+        "window": {"start": "2026-10-03T00:00:00Z", "end": "2026-10-04T00:00:00Z"},
+        "dimensions": {"category": "billing"},
+        "provenance": {"source": "eval-fixture"},
+        "metric_evidence_id": "MTR-000001",
+        "metric_key": "ticket_volume",
+        "severity": "high",
+        "score": 200.0,
+        "score_comparison": "relative_pct",
+        "detector_key": "pct_change.v1",
+        "explanation": "Ticket volume is 200% above its 7-day baseline.",
+        "contributor_status": "available",
+        "contributor_evidence_ids": ["SEG-000001"]
+      }
+    ],
+    "contributors": [
+      {
+        "evidence_id": "SEG-000001",
+        "label": "EMEA / Enterprise",
+        "window": {"start": "2026-10-03T00:00:00Z", "end": "2026-10-04T00:00:00Z"},
+        "dimensions": {"category": "billing"},
+        "provenance": {"source": "eval-fixture"},
+        "anomaly_evidence_id": "ANOM-000001",
+        "metric_evidence_id": "MTR-000001",
+        "family_key": "region+customer_tier",
+        "segment": {"region": "emea", "customer_tier": "enterprise"},
+        "rank": 1,
+        "current_value": 75.0,
+        "baseline_value": 7.0,
+        "delta_value": 68.0,
+        "contribution_pct": 85.0,
+        "method": "count_delta",
+        "sample": 75,
+        "min_sample": 5,
+        "sample_sufficient": true,
+        "flags": [],
+        "statement": "EMEA / Enterprise accounts for 85.0% of the observed positive change."
+      }
+    ],
+    "related_events": [
+      {
+        "evidence_id": "EVT-000001",
+        "label": "Billing API deployment",
+        "window": null,
+        "dimensions": {},
+        "provenance": {"source": "eval-fixture"},
+        "event_type": "deployment",
+        "title": "Billing API deployment",
+        "occurred_at": "2026-10-01T14:00:00Z",
+        "product": "billing_api",
+        "hours_from_window_start": -34.0,
+        "details": {}
+      }
+    ],
+    "excluded": [],
+    "limits": {
+      "max_anomalies": 5,
+      "contributors_per_family": 3,
+      "max_related_events": 5,
+      "event_lookback_hours": 72
+    }
+  },
+  "cases": [
+    {
+      "case_id": "citation.fabricated_id",
+      "title": "Fabricated citation invalidates the brief",
+      "category": "citation_validity",
+      "claims": [
+        {"claim_type": "observation", "text": "Billing ticket volume tripled against its baseline.", "evidence_ids": ["MTR-000001", "MTR-999999"]}
+      ],
+      "expected_status": "invalid",
+      "expected_codes": ["EVIDENCE_NOT_IN_BUNDLE"]
+    },
+    {
+      "case_id": "citation.unresolved_id",
+      "title": "Bundle ID missing from persisted evidence is unresolved",
+      "category": "citation_validity",
+      "claims": [
+        {"claim_type": "observation", "text": "EMEA Enterprise holds most of the observed change.", "evidence_ids": ["SEG-000001"]}
+      ],
+      "persisted_ids": ["MTR-000001", "ANOM-000001", "EVT-000001"],
+      "expected_status": "invalid",
+      "expected_codes": ["EVIDENCE_UNRESOLVED"]
+    },
+    {
+      "case_id": "citation.grounded_ids",
+      "title": "Claims citing existing bundle IDs validate",
+      "category": "citation_validity",
+      "claims": [
+        {"claim_type": "observation", "text": "Billing ticket volume tripled against its baseline.", "evidence_ids": ["MTR-000001", "ANOM-000001"]},
+        {"claim_type": "observation", "text": "EMEA Enterprise accounts for most of the observed change.", "evidence_ids": ["SEG-000001"]}
+      ],
+      "expected_status": "valid",
+      "expected_codes": []
+    },
+    {
+      "case_id": "causal.unsupported_caused_by",
+      "title": "Unsupported causal wording citing an event fails",
+      "category": "causal_guardrail",
+      "claims": [
+        {"claim_type": "inference", "text": "The Billing spike was caused by the Billing API deployment.", "evidence_ids": ["ANOM-000001", "EVT-000001"]}
+      ],
+      "expected_status": "invalid",
+      "expected_codes": ["CAUSAL_LANGUAGE_FOR_EVENT"]
+    },
+    {
+      "case_id": "causal.narrative_due_to",
+      "title": "Causal wording in the headline fails when events are in evidence",
+      "category": "causal_guardrail",
+      "headline": "Billing spike due to the Billing API deployment",
+      "claims": [
+        {"claim_type": "observation", "text": "Billing ticket volume tripled against its baseline.", "evidence_ids": ["MTR-000001", "ANOM-000001"]}
+      ],
+      "expected_status": "invalid",
+      "expected_codes": ["CAUSAL_LANGUAGE_IN_NARRATIVE"]
+    },
+    {
+      "case_id": "causal.grounded_correlation",
+      "title": "Grounded correlation wording passes the runtime guardrail",
+      "category": "causal_guardrail",
+      "claims": [
+        {"claim_type": "inference", "text": "The Billing spike coincided with the Billing API deployment and warrants investigation.", "evidence_ids": ["ANOM-000001", "EVT-000001"]}
+      ],
+      "expected_status": "valid",
+      "expected_codes": []
+    }
+  ]
+}

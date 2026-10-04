@@ -19,10 +19,18 @@ class LLMTrace(Base):
     __table_args__ = (
         CheckConstraint("latency_ms >= 0", name="latency_nonneg"),
         Index("ix_llm_traces_brief_id", "brief_id"),
+        Index("ix_llm_traces_action_id", "action_id"),
+        Index("ix_llm_traces_created_at_id", "created_at", "id"),
+        Index("ix_llm_traces_operation_created_at", "operation", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     brief_id: Mapped[int | None] = mapped_column(ForeignKey("briefs.id", ondelete="SET NULL"))
+    action_id: Mapped[int | None] = mapped_column(
+        ForeignKey("proposed_actions.id", ondelete="SET NULL")
+    )
+    # Correlates the trace with the HTTP request's log lines (Spec 14).
+    request_id: Mapped[str | None] = mapped_column(String(64))
     operation: Mapped[str] = mapped_column(String(100))
     model_name: Mapped[str] = mapped_column(String(100))
     latency_ms: Mapped[int] = mapped_column(Integer)

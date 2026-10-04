@@ -1,11 +1,17 @@
-"""Repositories for briefs, their claims and LLM call traces."""
+"""Repositories for briefs and their claims.
+
+``LLMTraceRepository`` lives in ``app.repositories.observability``; it is re-exported here
+for existing imports.
+"""
 
 from sqlalchemy import select
 
 from app.models.brief import Brief, BriefClaim
 from app.models.enums import BriefStatus
-from app.models.observability import LLMTrace
 from app.repositories.base import BaseRepository
+from app.repositories.observability import LLMTraceRepository
+
+__all__ = ["BriefRepository", "LLMTraceRepository"]
 
 
 class BriefRepository(BaseRepository[Brief]):
@@ -41,7 +47,3 @@ class BriefRepository(BaseRepository[Brief]):
             .limit(1)
         )
         return self.session.execute(stmt).scalars().first()
-
-
-class LLMTraceRepository(BaseRepository[LLMTrace]):
-    model = LLMTrace

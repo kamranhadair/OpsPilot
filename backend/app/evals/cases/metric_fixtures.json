@@ -1,0 +1,84 @@
+{
+  "suite": "metric_correctness",
+  "description": "Hand-computed metric fixtures. Expected values are derived by hand from the documented formulas, never by calling the engine.",
+  "cases": [
+    {
+      "case_id": "metric.volume_doubles",
+      "title": "Ticket volume doubles against a flat baseline",
+      "metric_key": "ticket_volume",
+      "baseline": [
+        {"tickets": 10}, {"tickets": 10}, {"tickets": 10}, {"tickets": 10},
+        {"tickets": 10}, {"tickets": 10}, {"tickets": 10}
+      ],
+      "current": {"tickets": 20},
+      "expected": {"value": "20", "baseline_value": "10", "change_pct": "100", "baseline_zero": false}
+    },
+    {
+      "case_id": "metric.volume_zero_baseline",
+      "title": "Zero baseline is explicit, never infinity",
+      "metric_key": "ticket_volume",
+      "baseline": [
+        {"tickets": 0}, {"tickets": 0}, {"tickets": 0}, {"tickets": 0},
+        {"tickets": 0}, {"tickets": 0}, {"tickets": 0}
+      ],
+      "current": {"tickets": 5},
+      "expected": {"value": "5", "baseline_value": "0", "change_pct": null, "baseline_zero": true}
+    },
+    {
+      "case_id": "metric.volume_zero_over_zero",
+      "title": "Zero current over a zero baseline is no change",
+      "metric_key": "ticket_volume",
+      "baseline": [
+        {"tickets": 0}, {"tickets": 0}, {"tickets": 0}, {"tickets": 0},
+        {"tickets": 0}, {"tickets": 0}, {"tickets": 0}
+      ],
+      "current": {"tickets": 0},
+      "expected": {"value": "0", "baseline_value": "0", "change_pct": "0", "baseline_zero": true}
+    },
+    {
+      "case_id": "metric.sla_pooled_baseline",
+      "title": "SLA breach baseline is pooled (14/122), not a mean of daily rates",
+      "metric_key": "sla_breach_rate",
+      "baseline": [
+        {"tickets": 2, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2},
+        {"tickets": 20, "sla_breached_tickets": 2}
+      ],
+      "current": {"tickets": 20, "sla_breached_tickets": 5},
+      "expected": {"value": "25", "baseline_value": "11.475410", "change_pct": "117.857140", "baseline_zero": false}
+    },
+    {
+      "case_id": "metric.first_response_mean",
+      "title": "First response is a mean of measured tickets",
+      "metric_key": "first_response_minutes",
+      "baseline": [
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10},
+        {"first_response_minutes_sum": 300, "first_response_minutes_count": 10}
+      ],
+      "current": {"first_response_minutes_sum": 600, "first_response_minutes_count": 10},
+      "expected": {"value": "60", "baseline_value": "30", "change_pct": "100", "baseline_zero": false}
+    },
+    {
+      "case_id": "metric.rate_undefined_without_tickets",
+      "title": "A rate with no current tickets is undefined, not zero",
+      "metric_key": "escalation_rate",
+      "baseline": [
+        {"tickets": 10, "escalated_tickets": 1}, {"tickets": 10, "escalated_tickets": 1},
+        {"tickets": 10, "escalated_tickets": 1}, {"tickets": 10, "escalated_tickets": 1},
+        {"tickets": 10, "escalated_tickets": 1}, {"tickets": 10, "escalated_tickets": 1},
+        {"tickets": 10, "escalated_tickets": 1}
+      ],
+      "current": {"tickets": 0},
+      "expected": {"value": null, "baseline_value": "10", "change_pct": null, "baseline_zero": false}
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.core.observability import stage_timer
 from app.models import Anomaly, AnomalyContributor, MetricSnapshot
 from app.models.enums import EvidenceType
 from app.repositories.anomaly_repository import AnomalyRepository
@@ -86,6 +87,13 @@ class ContributorService:
     # --- compute ---------------------------------------------------------------------
 
     def compute(self, evidence_id: str) -> ContributorAnalysisResponse:
+        """Timed entry point; see ``_compute``."""
+        with stage_timer("contributor_computation", evidence_id=evidence_id[:64]) as stage:
+            response = self._compute(evidence_id)
+            stage.update(outcome=response.status, family_count=len(response.groups))
+            return response
+
+    def _compute(self, evidence_id: str) -> ContributorAnalysisResponse:
         """Compute and persist contributors for an anomaly; a repeat call reuses the rows.
 
         Raises:

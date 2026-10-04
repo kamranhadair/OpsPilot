@@ -116,6 +116,15 @@ class TraceStatus(StrEnum):
     ERROR = "error"
 
 
+class LLMOperation(StrEnum):
+    """Every model operation the application performs. ``llm_traces.operation`` stays a
+    plain string column so a new operation needs no migration."""
+
+    BRIEF_GENERATION = "brief_generation"
+    ACTION_PROPOSAL = "action_proposal"
+    CITATION_JUDGE_EVAL = "citation_judge_eval"
+
+
 class ActorType(StrEnum):
     HUMAN = "human"
     SYSTEM = "system"

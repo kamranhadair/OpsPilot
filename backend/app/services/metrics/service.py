@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.observability import stage_timer
 from app.models import MetricSnapshot
 from app.models.enums import EvidenceType
 from app.repositories.metric_repository import MetricRepository
@@ -112,6 +113,15 @@ class MetricsService:
     # --- compute ---------------------------------------------------------------------
 
     def compute(self, window_end: datetime | None, filters: MetricFilters) -> MetricComputeResponse:
+        """Timed entry point; see ``_compute``."""
+        with stage_timer("metric_computation") as stage:
+            response = self._compute(window_end, filters)
+            stage.update(filters=dict(response.filters), metric_count=len(response.items))
+            return response
+
+    def _compute(
+        self, window_end: datetime | None, filters: MetricFilters
+    ) -> MetricComputeResponse:
         """Compute all registry metrics for one analysis window and persist them idempotently.
 
         Raises:
